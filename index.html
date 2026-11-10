@@ -106,6 +106,10 @@ button.rw{cursor:pointer} button.rw:active{background:var(--raise)}
 .ladder span{font-size:12px;font-weight:700;color:var(--muted);background:var(--raise);border-radius:999px;padding:3px 9px}
 .ladder span.on{background:var(--blue);color:var(--on-blue)} .ladder i{flex:1;height:2px;background:var(--line)}
 .btn:disabled{opacity:.4;cursor:default} .tbtn:disabled{color:var(--muted);cursor:default}
+.kvs{display:flex;flex-direction:column} .kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:15px}
+.kv span{color:var(--muted)} .kv i{font-style:normal;font-weight:700;margin-left:4px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--red);flex:none}
+.tag.green{color:var(--green)} .tag.red{color:var(--red)}
 /* tab bar */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--line);
   padding:6px max(16px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px))}
@@ -156,7 +160,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rname=()=>pick(FIRST)+' '+pick(LAST);
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
-let G=null, draft=null, confirmRetire=false, confirmNew=false, tab='race', seg='champ';
+let G=null, draft=null, confirmRetire=false, confirmNew=false, tab='race', seg='champ', turnOpen=false;
 
 const ovrOf=s=>s.pace*.25+s.race*.25+s.ovt*.15+s.tyre*.15+s.wet*.1+s.mental*.1;
 const grade=p=>p>=94?'S':p>=88?'A':p>=82?'B':p>=76?'C':'D';
@@ -194,10 +198,11 @@ function startCareer(){
   const cd=draft.cands[draft.sel], s={...cd.stats};
   G={v:2,nid:1,name:draft.name.trim()||'이름 없는 드라이버',nat:draft.nat,num:draft.num,helmet:draft.helmet,style:cd.style,age:15,year:2026,pot:cd.pot,stats:s,
      tier:0,role:'race',jr:{name:pick(JR_TEAMS),bonus:0},team:null,focus:draft.focus.slice(),phase:'preseason',
-     tot:{titles:0,wins:0,podiums:0,poles:0,races:0,points:0,jr:0},history:[],last:null,deltas:{}};
+     tot:{titles:0,wins:0,podiums:0,poles:0,races:0,points:0,jr:0},history:[],last:null,deltas:{},seen:[],buff:{grow:1,car:0},rep:0,turn:null};
   newWorld(); startSeason(); save(); render();
 }
 function startSeason(){
+  G.act=G.buff||{grow:1,car:0};G.buff={grow:1,car:0};G.s0={ovr:ovrOf(G.stats),stats:{...G.stats}};
   G.round=0;G.table={};G.ss={wins:0,podiums:0,poles:0,races:0};G.last=null;G.event=null;G.promoNote=null;G.deltas={};
   if(G.tier<GP){
     const T=TIERS[G.tier];
@@ -209,7 +214,7 @@ function startSeason(){
 function teamName(){return G.tier<GP?G.jr.name:G.teams[G.team].name}
 function growth(mult){
   const o=ovrOf(G.stats), a=G.age, af=a<=19?1.25:a<=23?1:a<=27?.6:a<=30?.3:.05;
-  const base=Math.max(0,G.pot-o)*.03*af*mult; const keys=STATS.map(s=>s[0]); const d={};
+  const base=Math.max(0,G.pot-o)*.03*af*mult*((G.act&&G.act.grow)||1); const keys=STATS.map(s=>s[0]); const d={};
   for(let i=0;i<3;i++){const k=(G.focus.length&&R()<.55)?pick(G.focus):pick(keys); const before=G.stats[k];
     G.stats[k]=Math.min(99,G.pot+4,Math.max(before,before+base*2*(.6+R()*.8))); d[k]=(d[k]||0)+G.stats[k]-before}
   Object.keys(d).forEach(k=>G.deltas[k]=(G.deltas[k]||0)+d[k]);
@@ -234,16 +239,16 @@ function nextRound(auto){
   doRace(racing,sub);
 }
 function setupRace(racing,sub){
-  const T=TIERS[G.tier], s=G.stats, wet=R()<.15, E=[]; G.deltas={};
+  const T=TIERS[G.tier], s=G.stats, wet=R()<.15, E=[], ac=(G.act&&G.act.car)||0; G.deltas={};
   const w=wet?.5:0;
   const pq=(s.pace*.7+s.mental*.3)*(1-w)+s.wet*w, pr=(s.race*.4+s.tyre*.25+s.ovt*.2+s.mental*.15)*(1-w)+s.wet*w;
   let subFor=null;
   if(G.tier<GP){G.field.forEach(f=>E.push({key:f.key,name:f.name,team:f.team,car:f.car,q:f.skill,r:f.skill}));
-    E.push({key:'P',name:G.name,team:G.jr.name,car:70+G.jr.bonus,q:pq,r:pr,me:1});}
+    E.push({key:'P',name:G.name,team:G.jr.name,car:70+G.jr.bonus+ac,q:pq,r:pr,me:1});}
   else{
     if(sub){subFor=pick(teamDrivers(G.team))}
     G.drivers.forEach(d=>{if(subFor&&d.id===subFor.id)return;E.push({key:'d'+d.id,name:d.name,team:G.teams[d.team].name,color:G.teams[d.team].color,car:G.teams[d.team].car,q:d.ovr,r:d.ovr})});
-    if(racing)E.push({key:'P',name:G.name,team:G.teams[G.team].name,color:G.teams[G.team].color,car:G.teams[G.team].car,q:pq,r:pr,me:1});
+    if(racing)E.push({key:'P',name:G.name,team:G.teams[G.team].name,color:G.teams[G.team].color,car:G.teams[G.team].car+ac,q:pq,r:pr,me:1});
   }
   const nz=wet?1.6:1, n=E.length;
   E.forEach(e=>{e.qs=e.car*T.cw+e.q*(1-T.cw)+g()*2.4*nz;e.base=e.car*T.cw+e.r*(1-T.cw)});
@@ -281,9 +286,137 @@ function finishRace(c,evText){
   G.round++;
   if(G.tier===GP&&G.role==='reserve'&&G.round===8){const td=teamDrivers(G.team),weak=td[td.length-1];
     if(ovrOf(G.stats)>weak.ovr+1){G.drivers=G.drivers.filter(d=>d.id!==weak.id);G.role='race';G.promoNote=`팀이 부진한 ${weak.name}을(를) 내보내고 당신에게 레이스 시트를 맡겼습니다.`}}
+  if(G.round===Math.floor(T.rounds/2)&&R()<.65)newTurn();
   if(G.round>=T.rounds)endSeason();
   save();render();
 }
+
+/* ---------- turning points (off-track events) ---------- */
+const lab=k=>STATS.find(x=>x[0]===k)[1];
+function fx(o){const out=[];for(const k in o){const v=o[k]; if(!v)continue; const sg=v>0?'+':'';
+  if(k==='grow'){G.buff.grow*=1+v;out.push(`다음 시즌 성장 ${sg}${Math.round(v*100)}%`)}
+  else if(k==='car'){G.buff.car+=v;out.push(`다음 시즌 머신 ${v>0?'강화':'약화'}`)}
+  else if(k==='rep'){G.rep=(G.rep||0)+v;out.push(`평판 ${sg}${v}`)}
+  else if(k==='pot'){G.pot=clamp(G.pot+v,60,99);out.push(`잠재력 ${sg}${v}`)}
+  else{const kk=k==='any'?pick(STATS)[0]:k;G.stats[kk]=clamp(G.stats[kk]+v,1,99);out.push(`${lab(kk)} ${sg}${v}`)}}
+  return out}
+const tref=()=>G.tier<GP?TIERS[G.tier].base:82, tch=(k,b=.5)=>R()<clamp(b+(G.stats[k]-tref())*.02,.15,.9);
+const lowTwo=()=>STATS.map(x=>x[0]).sort((a,b)=>G.stats[a]-G.stats[b]).slice(0,2), hiTwo=()=>STATS.map(x=>x[0]).sort((a,b)=>G.stats[b]-G.stats[a]).slice(0,2);
+const F1R=()=>G.tier===GP&&G.role==='race';
+const TURNS=[
+ {id:'coach',sc:'garage',t:'육성 방향을 바꾸자는 코치',d:()=>`지금은 ${G.focus.length?G.focus.map(lab).join('·'):'균형'} 위주로 훈련하고 있습니다. 드라이버 코치가 다른 계획표를 내밀었습니다.`,o:[
+  {l:'지금 방향을 유지한다',s:'하던 대로 간다',r:()=>['계획표를 돌려줬습니다. 하던 훈련을 계속합니다.',{mental:1}]},
+  {l:()=>`약점 보완: ${lowTwo().map(lab).join('·')}`,s:'가장 낮은 두 능력치를 집중해서 키운다',r:()=>{G.focus=lowTwo();return ['약점부터 메우기로 했습니다.',{}]}},
+  {l:()=>`강점 강화: ${hiTwo().map(lab).join('·')}`,s:'가장 높은 두 능력치를 더 끌어올린다',r:()=>{G.focus=hiTwo();return ['무기를 더 날카롭게 갈기로 했습니다.',{}]}}]},
+ {id:'sim',sc:'sim',t:'시뮬레이터 특훈 제안',d:'팀이 겨울 동안 시뮬레이터를 마음껏 써도 좋다고 합니다.',o:[
+  {l:'매일 밤 열 시까지 탄다',s:'한 바퀴 속도를 끌어올린다',r:()=>['수천 바퀴를 돌았습니다. 눈을 감아도 코스가 보입니다.',{pace:2,mental:-1}]},
+  {l:'주 3회만 탄다',s:'무리하지 않는다',r:()=>['꾸준히 감각을 유지했습니다.',{any:1}]},
+  {l:'푹 쉰다',s:'머리를 비운다',r:()=>['오랜만에 레이싱 생각 없이 지냈습니다.',{mental:2}]}]},
+ {id:'camp',sc:'gym',t:'고지대 체력 캠프',d:'트레이너가 3주짜리 고지대 캠프를 예약하자고 합니다. 가족 여행과 날짜가 겹칩니다.',o:[
+  {l:'캠프에 간다',s:'몸을 만든다',r:()=>['숨이 턱까지 찼지만 몸이 달라졌습니다.',{grow:.2,mental:-1}]},
+  {l:'가족 여행을 간다',s:'마음을 채운다',r:()=>['오랜만에 가족과 웃었습니다.',{mental:2}]}]},
+ {id:'ads',sc:'media',t:'밀려드는 스폰서 촬영',d:'스폰서 세 곳이 동시에 광고 촬영을 요청했습니다. 예산은 늘지만 훈련 시간이 줄어듭니다.',o:[
+  {l:'전부 수락한다',s:'예산이 늘어 머신이 좋아진다',r:()=>['촬영장을 오가며 겨울이 지나갔습니다.',{car:1,grow:-.15}]},
+  {l:'하나만 고른다',s:'적당히 타협한다',r:()=>['가장 오래된 스폰서와만 찍었습니다.',{mental:1}]},
+  {l:'모두 거절한다',s:'훈련에 집중한다',r:()=>['스폰서 담당자의 표정이 굳었습니다.',{grow:.1,rep:-1}]}]},
+ {id:'rival',sc:'media',t:'라이벌의 도발',d:'라이벌이 인터뷰에서 "그 친구는 좋은 차 덕을 봤을 뿐"이라고 말했습니다.',o:[
+  {l:'기자회견에서 맞받아친다',s:'말싸움에서 이기면 기세를 얻는다',r:()=>tch('mental')?['한마디로 회견장을 뒤집었습니다. 헤드라인은 당신 차지입니다.',{mental:2,rep:1}]:['말이 꼬였습니다. 클립이 밤새 돌았습니다.',{mental:-2}]},
+  {l:'"트랙에서 답하겠다"',s:'조용히 넘긴다',r:()=>['짧게 답하고 자리를 떴습니다.',{mental:1}]}]},
+ {id:'kids',sc:'track',t:'은사의 부탁',d:'처음 카트를 가르쳐 준 코치가 주말마다 유소년 클리닉을 도와 달라고 합니다.',o:[
+  {l:'기꺼이 돕는다',s:'주말 훈련을 포기한다',r:()=>['아이들에게 브레이킹 포인트를 알려 주다 초심을 떠올렸습니다.',{mental:2,grow:-.05}]},
+  {l:'일정이 안 된다고 한다',s:'훈련을 지킨다',r:()=>['코치는 괜찮다고 했지만 전화를 끊고 한참 앉아 있었습니다.',{}]}]},
+ {id:'rally',sc:'track',t:'겨울 랠리 초청',d:'눈길 랠리 이벤트에서 게스트 드라이버로 초청했습니다. 팀은 다칠까 봐 말립니다.',o:[
+  {l:'출전한다',s:'미끄러운 노면 감각을 익힌다',r:()=>R()<.12?['코너에서 눈더미에 박혔습니다. 손목을 다쳤습니다.',{wet:1,grow:-.3}]:['미끄러지는 차를 다루는 법을 몸으로 배웠습니다.',{wet:3}]},
+  {l:'조수석에만 탄다',s:'안전하게 구경한다',r:()=>['프로의 발놀림을 옆에서 지켜봤습니다.',{wet:1}]},
+  {l:'거절한다',s:'팀 말을 듣는다',r:()=>['팀이 고마워했습니다.',{rep:1}]}]},
+ {id:'tyre',sc:'garage',t:'타이어 엔지니어의 스터디',d:'타이어 엔지니어가 매주 한 번 데이터 읽는 법을 가르쳐 주겠다고 합니다.',o:[
+  {l:'매주 참석한다',s:'타이어를 이해한다',r:()=>['온도 그래프만 봐도 그립이 느껴집니다.',{tyre:3}]},
+  {l:'그 시간에 트랙 워크를 한다',s:'코스를 발로 익힌다',r:()=>['코너마다 기준점을 새로 잡았습니다.',{pace:1}]}]},
+ {id:'mind',sc:'home',t:'멘탈 코치',d:'매니저가 스포츠 심리 코치를 붙여 주겠다고 합니다. 솔직히 좀 낯간지럽습니다.',o:[
+  {l:'만나 본다',s:'꾸준히 상담한다',r:()=>['스타트 직전의 루틴이 생겼습니다.',{mental:3}]},
+  {l:'혼자 해결한다',s:'내 방식대로 한다',r:()=>R()<.6?['혼자서도 잘 버텼습니다.',{mental:1}]:['큰 실수 뒤에 혼자 가라앉는 시간이 길어졌습니다.',{mental:-1}]}]},
+ {id:'clip',sc:'media',t:'유출된 무전 클립',d:'엔지니어에게 짜증 내던 무전이 편집되어 SNS에 퍼졌습니다.',o:[
+  {l:'사과문을 올린다',s:'깔끔하게 정리한다',r:()=>['엔지니어가 먼저 농담으로 받아 줬습니다.',{mental:-1,rep:1}]},
+  {l:'무시한다',s:'금방 잊히길 바란다',r:()=>R()<.5?['사흘 만에 다른 이슈에 묻혔습니다.',{}]:['침묵이 오만으로 읽혔습니다.',{rep:-2}]},
+  {l:'직접 밈으로 만든다',s:'웃음으로 넘긴다',r:()=>tch('mental')?['티셔츠까지 나왔습니다. 팬이 늘었습니다.',{rep:2}]:['분위기를 못 읽었다는 말을 들었습니다.',{rep:-2}]}]},
+ {id:'eng',sc:'garage',t:'떠나려는 레이스 엔지니어',d:'호흡이 잘 맞던 엔지니어가 다른 팀 제안을 받았습니다.',o:[
+  {l:'남아 달라고 설득한다',s:'함께 쌓은 데이터를 지킨다',r:()=>tch('race',.55)?['"한 시즌만 더 해 봅시다." 엔지니어가 남았습니다.',{car:1.5}]:['끝내 떠났습니다. 빈자리가 큽니다.',{mental:-1}]},
+  {l:'웃으며 보내 준다',s:'새 엔지니어와 다시 시작한다',r:()=>['새 엔지니어는 전혀 다른 방식으로 차를 읽습니다. 배울 게 많습니다.',{race:1}]}]},
+ {id:'endu',sc:'track',c:()=>G.tier>=3,t:'24시간 내구 레이스',d:'내구 레이스 팀이 세 번째 드라이버 자리를 제안했습니다.',o:[
+  {l:'출전한다',s:'긴 스틴트를 경험한다',r:()=>R()<.1?['새벽 스틴트에서 사고가 났습니다. 갈비뼈에 금이 갔습니다.',{race:1,grow:-.3}]:['새벽 세 시의 트래픽을 헤치며 달렸습니다.',{race:2,tyre:2}]},
+  {l:'거절한다',s:'본업에 집중한다',r:()=>['TV로 레이스를 봤습니다.',{mental:1}]}]},
+ {id:'docu',sc:'media',t:'다큐멘터리 촬영팀',d:'스트리밍 다큐 제작진이 한 시즌 밀착 촬영을 요청했습니다.',o:[
+  {l:'전부 찍게 한다',s:'유명해지지만 피곤하다',r:()=>['카메라가 화장실 앞까지 따라옵니다.',{rep:2,mental:-2}]},
+  {l:'패독에서만 허락한다',s:'선을 긋는다',r:()=>['적당한 분량이 나왔습니다.',{rep:1}]},
+  {l:'거절한다',s:'조용히 달린다',r:()=>['제작진은 팀메이트 쪽으로 갔습니다.',{}]}]},
+ {id:'home',sc:'track',t:'문 닫는 고향 카트장',d:'처음 달렸던 카트장이 폐업 위기라는 소식입니다.',o:[
+  {l:'상금을 보탠다',s:'내 예산이 줄어든다',r:()=>['카트장 입구에 당신 이름이 붙었습니다.',{mental:3,car:-.5}]},
+  {l:'응원 글만 올린다',s:'마음만 전한다',r:()=>['결국 카트장은 문을 닫았습니다.',{mental:-1}]}]},
+ {id:'wrist',sc:'home',t:'손목 통증',d:'몇 달째 오른 손목이 시큰거립니다. 의사는 수술을 권합니다.',o:[
+  {l:'지금 수술한다',s:'한동안 훈련을 못 한다',r:()=>['수술은 잘 끝났습니다. 통증 없이 스티어링을 잡습니다.',{grow:-.25,pot:1}]},
+  {l:'테이핑하고 버틴다',s:'시즌을 통째로 지킨다',r:()=>R()<.3?['통증이 심해졌습니다. 예선 한 바퀴가 무뎌졌습니다.',{pace:-2}]:['다행히 더 나빠지지 않았습니다.',{ovt:-1}]}]},
+ {id:'scout',sc:'track',c:()=>G.tier<GP&&G.age<=20,t:'아카데미 스카우트의 테스트',d:'F1 팀 아카데미가 하루짜리 테스트 기회를 줬습니다.',o:[
+  {l:'한 바퀴에 모든 걸 건다',s:'랩타임으로 눈에 띈다',r:()=>tch('pace')?['타이밍 스크린 맨 위에 이름이 올랐습니다.',{rep:3,car:1}]:['마지막 코너에서 스핀했습니다.',{mental:-2}]},
+  {l:'롱런 데이터를 쌓는다',s:'꾸준함을 보여 준다',r:()=>tch('race',.6)?['"타이어를 아는 친구네." 엔지니어가 메모했습니다.',{rep:2}]:['무난했지만 기억에 남지 못했습니다.',{}]}]},
+ {id:'mate',sc:'garage',c:F1R,t:'팀메이트의 데이터',d:'팀메이트가 셋업 데이터를 서로 다 공개하자고 제안했습니다.',o:[
+  {l:'전부 공유한다',s:'함께 빨라진다',r:()=>['두 차 모두 셋업이 좋아졌습니다.',{race:1,mental:1}]},
+  {l:'핵심은 숨긴다',s:'내 우위를 지킨다',r:()=>R()<.4?['숨긴 게 들통났습니다. 차고 분위기가 얼어붙었습니다.',{pace:1,mental:-2}]:['나만 아는 브레이킹 포인트를 지켰습니다.',{pace:1}]}]},
+ {id:'dev',sc:'sim',c:()=>G.tier===GP,t:'신형 머신 개발',d:'기술 감독이 내년 머신 개발에 시뮬레이터 시간을 많이 써 달라고 합니다.',o:[
+  {l:'개발에 헌신한다',s:'내년 머신이 좋아진다',r:()=>['당신의 피드백이 서스펜션 설계에 반영됐습니다.',{car:1.5,grow:-.15}]},
+  {l:'내 훈련이 먼저다',s:'내 기량을 키운다',r:()=>['개발은 리저브 드라이버가 맡았습니다.',{grow:.1}]}]},
+ {id:'exam',sc:'home',c:()=>G.age<=18,t:'졸업 시험',d:'시즌 준비와 졸업 시험 기간이 겹쳤습니다.',o:[
+  {l:'시험도 제대로 본다',s:'마음의 짐을 던다',r:()=>['합격했습니다. 부모님이 더 좋아하십니다.',{mental:2,grow:-.1}]},
+  {l:'레이싱에 올인한다',s:'시험은 나중으로 미룬다',r:()=>['트랙에서 보낸 시간만큼 빨라졌습니다.',{grow:.1,mental:-1}]}]},
+ {id:'parents',sc:'home',c:()=>G.age<=21,t:'부모님의 걱정',d:'큰 사고 영상을 본 부모님이 이제 그만두면 안 되겠냐고 물으셨습니다.',o:[
+  {l:'왜 달리는지 차분히 설명한다',s:'시간을 들여 대화한다',r:()=>['밤늦게까지 이야기했습니다. 다음 레이스에 오시기로 했습니다.',{mental:2}]},
+  {l:'당분간 연락을 줄인다',s:'레이스에만 집중한다',r:()=>['전화기를 엎어 두고 달렸습니다. 빨라졌지만 마음이 무겁습니다.',{pace:1,mental:-2}]}]},
+ {id:'wet',sc:'track',t:'비 오는 테스트 데이',d:'테스트 날 폭우가 쏟아집니다. 다른 드라이버들은 차고에서 나오지 않습니다.',o:[
+  {l:'혼자 나가서 달린다',s:'젖은 노면을 익힌다',r:()=>R()<.1?['물웅덩이에서 미끄러져 벽에 닿았습니다.',{wet:1,mental:-2}]:['텅 빈 트랙에서 수십 바퀴를 돌았습니다.',{wet:3}]},
+  {l:'데이터 미팅에 들어간다',s:'안전하게 보낸다',r:()=>['지난 시즌 온보드를 다시 뜯어봤습니다.',{pace:1}]}]},
+ {id:'helmet',sc:'media',t:'팬 헬멧 디자인 공모',d:'팬들이 보낸 헬멧 디자인 수백 장이 도착했습니다.',o:[
+  {l:'팬 디자인으로 바꾼다',s:'새 헬멧을 쓴다',r:()=>{G.helmet=(G.helmet+ri(1,HELMS.length-1))%HELMS.length;return ['새 헬멧이 공개되자 반응이 뜨겁습니다.',{mental:1,rep:1}]}},
+  {l:'지금 헬멧을 지킨다',s:'내 색을 유지한다',r:()=>['이 헬멧으로 정상까지 가기로 했습니다.',{mental:1}]}]},
+ {id:'weight',sc:'gym',t:'체중 감량 요구',d:'팀이 머신 무게 배분을 위해 3kg을 더 빼 달라고 합니다.',o:[
+  {l:'엄격한 식단을 시작한다',s:'빨라지지만 예민해진다',r:()=>['차는 가벼워졌지만 늘 배가 고픕니다.',{pace:1,tyre:1,mental:-2}]},
+  {l:'근력을 지키겠다고 한다',s:'지금 몸을 유지한다',r:()=>['트레이너가 당신 편을 들어 줬습니다.',{mental:1}]}]},
+ {id:'agent',sc:'media',t:'거물 에이전트의 명함',d:'패독에서 가장 유명한 에이전트가 계약을 맡겠다고 접근했습니다.',o:[
+  {l:'에이전트를 바꾼다',s:'더 좋은 계약을 노린다',r:()=>['오랜 매니저에게 전화를 거는 손이 무거웠습니다.',{rep:3,mental:-1}]},
+  {l:'지금 매니저와 간다',s:'의리를 지킨다',r:()=>['"끝까지 같이 가자." 매니저가 웃었습니다.',{mental:2}]}]},
+ {id:'esport',sc:'sim',t:'심야 e스포츠 대회',d:'온라인 레이싱 대회 초청장이 왔습니다. 결승은 새벽 두 시입니다.',o:[
+  {l:'참가한다',s:'밤을 새운다',r:()=>R()<.3?['우승했지만 다음 날 훈련을 통째로 망쳤습니다.',{pace:1,mental:-1}]:['가상 서킷에서도 한 바퀴 감각이 통했습니다.',{pace:1}]},
+  {l:'잔다',s:'컨디션을 지킨다',r:()=>['여덟 시간을 푹 잤습니다.',{mental:1}]}]},
+ {id:'legend',sc:'garage',t:'전설의 한마디',d:'은퇴한 월드 챔피언이 차고에 들렀습니다. 질문 하나만 받겠다고 합니다.',o:[
+  {l:'"브레이킹은 어떻게 합니까"',s:'추월을 묻는다',r:()=>['"눈으로 밟지 말고 엉덩이로 밟아." 이상하게 이해가 됐습니다.',{ovt:3}]},
+  {l:'"레이스는 어떻게 읽습니까"',s:'운영을 묻는다',r:()=>['"열 바퀴 뒤의 타이어를 상상해." 노트에 적었습니다.',{race:3}]},
+  {l:'"무섭지 않았습니까"',s:'마음을 묻는다',r:()=>['"매번 무서웠지. 그래서 빨랐어." 오래 남을 대답입니다.',{mental:3}]}]}
+];
+const turnDef=()=>G.turn&&TURNS.find(e=>e.id===G.turn.id);
+function newTurn(){let pool=TURNS.filter(e=>(!e.c||e.c())&&!G.seen.includes(e.id)); if(!pool.length){G.seen=[];pool=TURNS.filter(e=>!e.c||e.c())}
+  const e=pick(pool); G.seen.push(e.id); G.turn={id:e.id,done:false}}
+function chooseTurn(i){const e=turnDef(); if(!e||G.turn.done)return; const [txt,o]=e.o[i].r(); G.turn.done=true; G.turn.res=txt; G.turn.fx=fx(o); save()}
+const scache={};
+function scene(type){const key=type+(G?G.helmet:0); if(scache[key])return scache[key];
+  const c=document.createElement('canvas');c.width=96;c.height=54;const x=c.getContext('2d'),r=(col,a,b,w,h)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
+  const P={garage:['#2b3040','#4a4f5e'],home:['#7a5a48','#a07a55'],media:['#1d2b4f','#39415a'],gym:['#3a3f46','#7a6548'],sim:['#15161e','#2a2d3a'],track:['#6fb7e8','#40424e']}[type];
+  r(P[0],0,0,96,38);r(P[1],0,38,96,16);for(let i=0;i<96;i+=8)r('rgba(0,0,0,.12)',i,38,1,16);
+  if(type==='garage'){for(let i=0;i<5;i++)for(let j=0;j<2;j++)r('#3a4156',6+i*9,6+j*9,7,7);r('#d0312d',50,34,36,6);r('#16161a',62,30,10,4);r('#d0312d',84,27,2,9);r('#16161a',52,39,7,7);r('#16161a',76,39,7,7);r('#8a8f99',54,41,3,3);r('#8a8f99',78,41,3,3)}
+  if(type==='home'){r('#3b2a22',8,6,26,20);r('#f4b56a',10,8,22,16);r('#e98a4c',10,18,22,6);r('#3b2a22',20,8,2,16);r('#3f6b8a',52,32,36,10);r('#335a75',52,28,36,5);r('#e8d9a8',84,10,6,6);r('#3b2a22',86,16,2,22)}
+  if(type==='media'){for(let i=0;i<12;i++)for(let j=0;j<4;j++)r((i+j)%2?'#2a3c6e':'#22325c',i*8,4+j*8,8,8);r('#16161a',64,24,2,18);r('#c9ccd4',62,20,6,5);r('#ffe14a',76,8,10,6)}
+  if(type==='gym'){r('#16161a',58,12,2,28);r('#16161a',86,12,2,28);r('#16161a',58,12,30,2);r('#c9ccd4',54,28,38,2);r('#d0312d',52,24,3,10);r('#d0312d',91,24,3,10);r('#22262e',62,38,22,4)}
+  if(type==='sim'){[50,64,78].forEach((a,i)=>{r('#0b0c12',a,10+(i===1?-2:0),13,10);r('#3fd0ff',a+1,11+(i===1?-2:0),11,8);r('#40424e',a+1,16+(i===1?-2:0),11,3)});r('#22262e',60,30,16,12);r('#16161a',64,26,8,5)}
+  if(type==='track'){r('#2f7a45',0,30,96,8);for(let i=0;i<96;i+=6)r((i/6)%2?'#e8e8e8':'#d0312d',i,37,6,2);r('#c9ccd4',48,8,42,18);for(let i=0;i<10;i++)for(let j=0;j<3;j++)r(['#e0282d','#0071e3','#ffe14a','#ffffff'][(i*3+j)%4],51+i*4,11+j*5,2,2);r('#16161a',44,6,1,24);r('#ffffff',45,6,6,4);r('#16161a',45,6,3,2);r('#16161a',48,8,3,2)}
+  const h=HELMS[(G?G.helmet:0)%HELMS.length];
+  r('#16161a',23,46,4,6);r('#16161a',30,46,4,6);r(h[0],21,34,15,12);r(h[1],27,34,3,12);
+  const col={k:'#16161a',a:h[0],b:h[1],v:'#3b4a66',w:'#cfe3ff'};HMAP.forEach((row,y)=>[...row].forEach((ch,xx)=>{if(col[ch])r(col[ch],20+xx,21+y,1,1)}));
+  if(type!=='sim'&&type!=='gym'){r('#16161a',41,46,3,6);r('#16161a',46,46,3,6);r('#22304a',39,35,12,11);r('#e0b48c',41,26,8,9);r('#8a8f99',41,25,8,3);r('#16161a',47,29,1,1)}
+  return scache[key]=c.toDataURL()}
+function turnView(){const e=turnDef(), t=G.turn, tx=v=>typeof v==='function'?v():v;
+  const top=`<div class="screen"><img class="px" style="width:100%;height:auto;display:block;border-radius:10px" src="${scene(e.sc)}" width="96" height="54" alt=""></div>`;
+  if(t.done)return top+`<div class="card flash"><div><div class="cap">전환점</div><div class="ttl">${e.t}</div></div><p>${esc(t.res)}</p>${t.fx.length?`<div class="tags">${t.fx.map(f=>`<span class="tag ${/[-−]|약화/.test(f)?'red':'green'}">${f}</span>`).join('')}</div>`:''}<button class="btn" data-a="tok">확인</button></div>`;
+  return top+`<div class="card"><div><div class="cap">전환점</div><div class="ttl">${e.t}</div></div><p>${esc(tx(e.d))}</p></div>
+  <div class="list">${e.o.map((o,i)=>`<button class="rw" data-a="tpick" data-v="${i}"><div class="g"><b>${tx(o.l)}</b><span>${o.s}</span></div><span class="ch">›</span></button>`).join('')}</div>
+  <button class="tbtn" data-a="tlater">나중에 생각하기</button>`}
+const todo=()=>G.turn&&!G.turn.done?`<div class="list"><button class="rw" data-a="topen"><span class="dot"></span><div class="g"><b>전환점이 찾아왔어요</b><span>${turnDef().t}</span></div><span class="ch">›</span></button></div>`:'';
 
 /* ---------- live race ---------- */
 let RC=null;
@@ -446,14 +579,14 @@ function endSeason(){
   if(G.tier===GP&&G.role==='race'){const m=teamDrivers(G.team)[0];if(m){const r=G.table['d'+m.id];mate={name:m.name,pts:r?r.pts:0}}}
   G.history.push({year:G.year,age:G.age,series:TIERS[G.tier].short,team:teamName(),role:G.role,pos,pts:idx<0?0:st[idx].pts,wins:G.ss.wins,pod:G.ss.podiums,champ});
   G.seasonEnd={pos,champ,pts:idx<0?0:st[idx].pts,mate,winner:st[0]&&st[0].name};
-  G.offers=makeOffers(pos,mate);G.phase='offseason';confirmRetire=false;
+  G.offers=makeOffers(pos,mate);G.rep=0;newTurn();G.phase='offseason';confirmRetire=false;
 }
 function makeOffers(pos,mate){
   const o=[], ovr=ovrOf(G.stats), age=G.age+1;
   const gpOffers=(rep)=>{const res=[];
     G.teams.forEach((t,i)=>{const td=teamDrivers(i); if(!td.length)return; const weak=td[td.length-1];
       const mine=G.tier===GP&&G.team===i; if(mine&&G.role==='race')return;
-      const sc=ovr+(age<=23?3:0)+rep+g()*2;
+      const sc=ovr+(age<=23?3:0)+rep+(G.rep||0)+g()*2;
       if(sc>=weak.ovr)res.push({type:'gp',team:i,role:'race'});
       else if((sc>=weak.ovr-9&&age<=27)||mine)res.push({type:'gp',team:i,role:'reserve'})});
     const race=res.filter(r=>r.role==='race').sort((a,b)=>G.teams[b.team].car-G.teams[a.team].car).slice(0,3);
@@ -493,7 +626,7 @@ function acceptOffer(i){
     if(!of.stay&&of.role==='race'){const td=teamDrivers(of.team),weak=td[td.length-1];if(td.length>=2)G.drivers=G.drivers.filter(d=>d.id!==weak.id)}
     G.tier=GP;G.team=of.team;G.role=of.role;
   }
-  G.offers=null;startSeason();save();render();
+  G.offers=null;G.turn=null;turnOpen=false;startSeason();save();render();
 }
 function retire(){
   G.phase='retired';
@@ -558,6 +691,7 @@ function viewCreate(){const d=draft;
 
 function phaseBlocks(){
   const T=TIERS[G.tier];
+  if(turnOpen&&G.turn&&turnDef())return turnView();
   if(G.phase==='preseason'){
     return `<div class="card"><div><div class="cap">프리시즌</div><div class="ttl">집중해서 키울 능력치</div></div>
     ${G.regNews&&G.tier===GP?'<div class="note">기술 규정이 바뀌어 팀 간 머신 서열이 크게 흔들립니다.</div>':''}
@@ -565,7 +699,7 @@ function phaseBlocks(){
     <div class="chips">${STATS.map(([k,l])=>`<button class="chipb${G.focus.includes(k)?' on':''}" data-a="focus" data-v="${k}">${l}</button>`).join('')}</div><p class="sub" style="font-size:13px">최대 2개. 고르지 않으면 고르게 성장합니다.</p>
     <button class="btn" data-a="go">개막전으로</button></div>`}
   if(G.phase==='season'){
-    return `<div class="card"><div><div class="cap">ROUND ${G.round+1} / ${T.rounds}</div><div class="ttl">${CIRCUITS[G.round]} 그랑프리</div></div>
+    return todo()+`<div class="card"><div><div class="cap">ROUND ${G.round+1} / ${T.rounds}</div><div class="ttl">${CIRCUITS[G.round]} 그랑프리</div></div>
     <div class="prog"><i style="width:${G.round/T.rounds*100}%"></i></div>
     ${G.promoNote?`<div class="note">${esc(G.promoNote)}</div>`:''}
     <button class="btn" data-a="next">레이스 시작</button><div class="ctrl"><button class="tbtn" data-a="quick">이 레이스 건너뛰기</button><button class="tbtn" data-a="auto">시즌 끝까지 진행</button></div></div>`}
@@ -579,9 +713,13 @@ function phaseBlocks(){
       const t=G.teams[o.team];
       return `<button class="rw" data-a="offer" data-v="${i}">${sw(t.color)}<div class="g"><b>${esc(t.name)}</b><span>${o.stay?'재계약 · ':''}${o.role==='race'?'레이스 시트':'리저브'} · 머신 ${carRank(o.team)}위</span></div><span class="ch">›</span></button>`}).join('');
     return `<div class="card flash"><div><div class="cap">${G.year} 시즌 종료</div><div class="ttl${e.champ?' purple':''}">${hd}</div></div>
-    <p class="sub num">${e.pts} PTS · ${G.ss.wins}승 · 포디움 ${G.ss.podiums}회${e.champ?'':` · 챔피언 ${esc(e.winner||'-')}`}</p>
+    <div class="kvs"><div class="kv"><span>출전</span><b class="num">${G.ss.races}경기 · ${e.pts} PTS</b></div><div class="kv"><span>우승 · 포디움</span><b class="num">${G.ss.wins}승 · ${G.ss.podiums}회</b></div>
+    ${e.champ?'':`<div class="kv"><span>챔피언</span><b>${esc(e.winner||'-')}</b></div>`}
+    <div class="kv"><span>종합 능력치</span><b class="num">${Math.floor(G.s0.ovr)} → ${Math.floor(ovrOf(G.stats))} ${up(ovrOf(G.stats)-G.s0.ovr)}</b></div>
+    ${STATS.map(([k,l])=>[l,G.stats[k],G.stats[k]-G.s0.stats[k]]).sort((a,b)=>b[2]-a[2]).slice(0,2).map(x=>`<div class="kv"><span>${x[0]}</span><b class="num">${Math.floor(x[1])} ${up(x[2])}</b></div>`).join('')}</div>
     ${e.dropped?'<div class="note">팀이 재계약을 포기했습니다. 팀메이트와의 격차가 너무 컸습니다.</div>':''}
     ${G.offers.length?'':`<div class="note">${G.tier<GP?'후원사가 떠났습니다. 주니어 포뮬러에 남을 자금이 없습니다.':'어느 팀도 시트를 제안하지 않았습니다.'}</div>`}</div>
+    ${todo()}
     ${G.offers.length?`<div class="gl">${G.year+1} 시즌 제안</div><div class="list">${offers}</div>`:''}
     ${confirmRetire?`<div class="card"><p>정말 은퇴할까요? 되돌릴 수 없습니다.</p><button class="btn" data-a="retireno">계속 달린다</button><button class="tbtn red" data-a="retireyes">은퇴한다</button></div>`:`<button class="tbtn red" data-a="retire">은퇴하기</button>`}`}
   if(G.phase==='retired'){const [t,d]=legacy();
@@ -590,7 +728,8 @@ function phaseBlocks(){
     <button class="btn" data-a="newyes">새 커리어 시작</button></div>`+hallPanel(G.hallAt)}
   return '';
 }
-function lastCard(){const L=G.last; if(!L||(G.phase!=='season'&&G.phase!=='offseason'))return '';
+const up=d=>{const r=Math.round(d);return r>0?`<i class="green">+${r}</i>`:r<0?`<i class="red">${r}</i>`:''};
+function lastCard(){const L=G.last; if(!L||turnOpen||(G.phase!=='season'&&G.phase!=='offseason'))return '';
   const c=L.dnf?'red':L.pos===1?'purple':L.pos<=3?'green':'';
   return `<div class="card flash"><div class="cap">${L.gp} 그랑프리 결과${L.wet?' · 우천':''}</div>
   <div class="resrow"><div class="pos ${L.raced?c:'mut'}">${L.raced?(L.dnf?'DNF':'P'+L.pos):'대기'}</div><div><p>${esc(L.text)}</p>${L.raced?`<p class="sub num">그리드 P${L.grid}${L.dnf?'':` · +${L.pts} PTS`}</p>`:''}</div></div>
@@ -629,8 +768,11 @@ app.addEventListener('click',ev=>{
   const b=ev.target.closest('[data-a]'); if(!b)return; const a=b.dataset.a,v=b.dataset.v;
   if(a[0]==='l'&&RC&&a!=='lev0'){liveAct(a,v);return}
   if(!G)syncDraft();
-  if(a==='tab'){tab=v;confirmNew=false;window.scrollTo(0,0)}
+  if(a==='tab'){tab=v;turnOpen=false;confirmNew=false;window.scrollTo(0,0)}
   else if(a==='seg'){seg=v}
+  else if(a==='topen'){turnOpen=true;window.scrollTo(0,0)}
+  else if(a==='tlater'||a==='tok'){turnOpen=false}
+  else if(a==='tpick'){chooseTurn(+v)}
   else if(a==='style'){draft.style=v}
   else if(a==='reroll'){if(draft.rolls>0){draft.rolls--;draft.pot=rollPot()}}
   else if(a==='cnext'){if(draft.step===2&&!draft.name.trim())return;draft.step++;window.scrollTo(0,0)}
@@ -657,7 +799,8 @@ app.addEventListener('click',ev=>{
   render();
 });
 function start(data){
-  G=(data&&data.G)||store.get(SAVE); if(G&&G.v!==2)G=null; if(G&&!Array.isArray(G.focus))G.focus=G.focus?[G.focus]:[]; if(G&&G.phase==='event'){G.phase='season';G.event=null}
+  G=(data&&data.G)||store.get(SAVE); if(G&&G.v!==2)G=null; if(G){G.seen=G.seen||[];G.buff=G.buff||{grow:1,car:0};G.act=G.act||{grow:1,car:0};G.s0=G.s0||{ovr:ovrOf(G.stats),stats:{...G.stats}}}
+  if(G&&!Array.isArray(G.focus))G.focus=G.focus?[G.focus]:[]; if(G&&G.phase==='event'){G.phase='season';G.event=null}
   newDraft(); render();
 }
 window.claude?.hot?.snapshot?.(()=>({G}));
