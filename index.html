@@ -164,7 +164,7 @@ let G=null, draft=null, confirmRetire=false, confirmNew=false, tab='race', seg='
 
 const ovrOf=s=>s.pace*.25+s.race*.25+s.ovt*.15+s.tyre*.15+s.wet*.1+s.mental*.1;
 const grade=p=>p>=94?'S':p>=88?'A':p>=82?'B':p>=76?'C':'D';
-const rollPot=()=>Math.round(72+Math.pow(R(),1.25)*26);
+const POT=93; const rollPot=()=>Math.round(72+Math.pow(R(),1.25)*26);
 
 /* ---------- world ---------- */
 function freeProspects(){const on=new Set(G.drivers.map(d=>d.name));return PROSPECTS.filter(n=>!on.has(n)&&!G.used.includes(n))}
@@ -234,7 +234,7 @@ const EVENTS=[
 function nextRound(auto){
   if(G.phase!=='season'||RC)return;
   let racing=true, sub=false;
-  if(G.tier===GP&&G.role==='reserve'){racing=R()<.07;sub=racing}
+  if(G.tier===GP&&G.role==='reserve'){racing=R()<.15;sub=racing}
   if(racing&&!auto){startLive(sub);return}
   doRace(racing,sub);
 }
@@ -280,12 +280,12 @@ function finishRace(c,evText){
       :me.pos<me.grid?`그리드 ${me.grid}위에서 ${me.grid-me.pos}계단을 끌어올렸습니다.`
       :me.pos>me.grid?`그리드 ${me.grid}위에서 출발했지만 순위를 잃었습니다.`:'출발한 자리 그대로 레이스를 마쳤습니다.';
     if(sub)text='주전 드라이버 '+subFor.name+'의 결장으로 대타 출전! '+text;
-  }else{growth(.35);text=pick(['시뮬레이터에서 주말을 보냈습니다. 피트월 뒤에서 레이스를 지켜봅니다.','리저브 드라이버로 대기했습니다. 오늘도 헬멧을 쓸 일은 없었습니다.','금요일 연습 주행 데이터만 정리하고 주말이 끝났습니다.'])}
+  }else{growth(.6);text=pick(['시뮬레이터에서 주말을 보냈습니다. 피트월 뒤에서 레이스를 지켜봅니다.','리저브 드라이버로 대기했습니다. 오늘도 헬멧을 쓸 일은 없었습니다.','금요일 연습 주행 데이터만 정리하고 주말이 끝났습니다.'])}
   G.last={gp:CIRCUITS[G.round],wet,raced:!!me,grid:me&&me.grid,pos:me&&me.pos,dnf:me&&me.dnf,pts:me?me.pts:0,text,ev:evText,n,
     cls:E.slice(0,10).concat(me&&me.pos>10?[me]:[]).map(e=>({pos:e.pos,name:e.name,team:e.team,color:e.color,grid:e.grid,pts:e.pts,dnf:e.dnf,me:e.me}))};
   G.round++;
-  if(G.tier===GP&&G.role==='reserve'&&G.round===8){const td=teamDrivers(G.team),weak=td[td.length-1];
-    if(ovrOf(G.stats)>weak.ovr+1){G.drivers=G.drivers.filter(d=>d.id!==weak.id);G.role='race';G.promoNote=`팀이 부진한 ${weak.name}을(를) 내보내고 당신에게 레이스 시트를 맡겼습니다.`}}
+  if(G.tier===GP&&G.role==='reserve'&&G.round%4===0&&G.round<16){const td=teamDrivers(G.team),weak=td[td.length-1];
+    if(td.length>=2&&ovrOf(G.stats)>weak.ovr-1){G.drivers=G.drivers.filter(d=>d.id!==weak.id);G.role='race';G.promoNote=`팀이 부진한 ${weak.name}을(를) 내보내고 당신에게 레이스 시트를 맡겼습니다.`}}
   if(G.round===Math.floor(T.rounds/2)&&R()<.65)newTurn();
   if(G.round>=T.rounds)endSeason();
   save();render();
@@ -353,7 +353,7 @@ const TURNS=[
   {l:'상금을 보탠다',s:'내 예산이 줄어든다',r:()=>['카트장 입구에 당신 이름이 붙었습니다.',{mental:3,car:-.5}]},
   {l:'응원 글만 올린다',s:'마음만 전한다',r:()=>['결국 카트장은 문을 닫았습니다.',{mental:-1}]}]},
  {id:'wrist',sc:'home',t:'손목 통증',d:'몇 달째 오른 손목이 시큰거립니다. 의사는 수술을 권합니다.',o:[
-  {l:'지금 수술한다',s:'한동안 훈련을 못 한다',r:()=>['수술은 잘 끝났습니다. 통증 없이 스티어링을 잡습니다.',{grow:-.25,pot:1}]},
+  {l:'지금 수술한다',s:'한동안 훈련을 못 한다',r:()=>['수술은 잘 끝났습니다. 통증 없이 스티어링을 잡습니다.',{grow:-.25,pace:2,ovt:1}]},
   {l:'테이핑하고 버틴다',s:'시즌을 통째로 지킨다',r:()=>R()<.3?['통증이 심해졌습니다. 예선 한 바퀴가 무뎌졌습니다.',{pace:-2}]:['다행히 더 나빠지지 않았습니다.',{ovt:-1}]}]},
  {id:'scout',sc:'track',c:()=>G.tier<GP&&G.age<=20,t:'아카데미 스카우트의 테스트',d:'F1 팀 아카데미가 하루짜리 테스트 기회를 줬습니다.',o:[
   {l:'한 바퀴에 모든 걸 건다',s:'랩타임으로 눈에 띈다',r:()=>tch('pace')?['타이밍 스크린 맨 위에 이름이 올랐습니다.',{rep:3,car:1}]:['마지막 코너에서 스핀했습니다.',{mental:-2}]},
@@ -428,7 +428,7 @@ const SHOP=[
  {id:'simrig',ic:'home',n:'홈 시뮬레이터',d:'집에서도 매일 달립니다. 영구히 성장 +8%',p:3,once:1,perm:{grow:.08}},
  {id:'eng',ic:'tool',n:'개인 퍼포먼스 엔지니어',d:'다음 시즌 머신이 크게 좋아집니다.',p:6,fx:{car:2}},
  {id:'super',ic:'car',n:'슈퍼카',d:'차고에 세워 두기만 해도 기분이 좋습니다. 멘탈 +3, 평판 +1',p:10,once:1,fx:{mental:3,rep:1}},
- {id:'kart',ic:'car',n:'내 이름을 건 카트장',d:'초심으로 돌아가는 곳. 잠재력 +1, 멘탈 +2',p:25,once:1,fx:{pot:1,mental:2}},
+ {id:'kart',ic:'car',n:'내 이름을 건 카트장',d:'초심으로 돌아가는 곳. 추월 +2, 멘탈 +3',p:25,once:1,fx:{ovt:2,mental:3}},
  {id:'apt',ic:'home',n:'모나코 아파트',d:'항구가 보이는 집. 매 시즌 멘탈 +1',p:40,once:1,perm:{mental:1}},
  {id:'yacht',ic:'boat',n:'요트',d:'그랑프리 주말마다 항구에 띄웁니다. 멘탈 +5, 평판 +2',p:60,once:1,fx:{mental:5,rep:2}},
  {id:'jet',ic:'plane',n:'전용기',d:'이동 피로가 사라집니다. 영구히 성장 +6%',p:90,once:1,perm:{grow:.06}}
@@ -624,7 +624,7 @@ function makeOffers(pos,mate){
     G.teams.forEach((t,i)=>{const td=teamDrivers(i); if(!td.length)return; const weak=td[td.length-1];
       const mine=G.tier===GP&&G.team===i; if(mine&&G.role==='race')return;
       const sc=ovr+(age<=23?3:0)+rep+(G.rep||0)+g()*2;
-      if(sc>=weak.ovr)res.push({type:'gp',team:i,role:'race'});
+      if(sc>=weak.ovr-(mine?4:0))res.push({type:'gp',team:i,role:'race'});
       else if((sc>=weak.ovr-12&&age<=27)||mine)res.push({type:'gp',team:i,role:'reserve'})});
     const race=res.filter(r=>r.role==='race').sort((a,b)=>G.teams[b.team].car-G.teams[a.team].car).slice(0,3);
     const rsv=res.filter(r=>r.role==='reserve').sort((a,b)=>G.teams[b.team].car-G.teams[a.team].car).slice(0,2);
@@ -636,10 +636,10 @@ function makeOffers(pos,mate){
       if(pos===1)o.push(J(nt,3),J(nt,0)); else if(pos<=3)o.push(J(nt,0),J(nt,-3)); else if(pos<=10||G.history.filter(h=>h.series===TIERS[G.tier].short).length>=2)o.push(J(nt,-3));
       if(pos<=3&&nt+1<GP&&ovr>=TIERS[nt+1].base-2)o.push(J(nt+1,pos===1?0:-3,1));
       if(pos<=2&&nt+1===GP)gpOffers(pos===1?2:0).forEach(x=>o.push(x));
-    }else if(pos&&pos<=8){gpOffers(pos===1?4:pos<=3?2:0).forEach(x=>o.push(x))}
+    }else if(pos&&pos<=8){gpOffers(pos===1?5:pos<=3?3:1).forEach(x=>o.push(x))}
     o.push({type:'jr',tier:G.tier,name:pos<=5?pick(JR_TEAMS):G.jr.name,bonus:pos<=5?2:G.jr.bonus,stay:1});
   }else{
-    let rep=0, dropped=false;
+    let rep=G.role==='reserve'?3:0, dropped=false;
     if(G.role==='race'){rep=pos===1?4:pos<=3?3:pos<=8?1:0;
       const rank=G.teams.map((t,i)=>i).sort((a,b)=>G.teams[b].car-G.teams[a].car).indexOf(G.team);
       if(mate&&G.seasonEnd.pts<mate.pts*.45&&rank<6&&R()<.65)dropped=true;
@@ -653,7 +653,7 @@ function makeOffers(pos,mate){
   if(wasGP&&c.years>0&&drop){const pay=+(c.salary*c.years*.5).toFixed(1);G.money+=pay;G.seasonEnd.payout=pay;c.years=0}
   const locked=wasGP&&c.years>0;
   o.forEach(x=>{const mine=x.type==='gp'&&wasGP&&x.team===G.team;
-    x.salary=salaryFor(x); x.maxY=x.type==='jr'?1:x.role==='reserve'?2:age>=34?1:3; x.years=Math.min(2,x.maxY);
+    x.salary=salaryFor(x); x.maxY=x.type==='jr'?1:x.role==='reserve'?1:age>=34?1:3; x.years=Math.min(2,x.maxY);
     if(locked){ if(mine&&x.role===G.role){x.locked=1;x.years=c.years;x.salary=c.salary} else if(!mine){x.fee=+(c.salary*c.years*.3).toFixed(1)} }});
   return o;
 }
@@ -713,7 +713,7 @@ const KNAMES=['한서준','김도윤','이하준','박시우','정우진','최�
 function mkCands(){const keys=STATS.map(x=>x[0]);
   return STYLES.slice().sort(()=>R()-.5).slice(0,3).map(st=>{const v={};keys.forEach(k=>v[k]=29+ri(0,11));v[st[0]]+=8;
     let d=222-keys.reduce((a,k)=>a+v[k],0);while(d!==0){const k=pick(keys);if(d>0&&v[k]<50){v[k]++;d--}else if(d<0&&v[k]>26&&k!==st[0]){v[k]--;d++}}
-    return {style:st[0],name:st[1],desc:st[2].split('. ')[0]+'.',stats:v,pot:rollPot()}})}
+    return {style:st[0],name:st[1],desc:st[2].split('. ')[0]+'.',stats:v,pot:POT}})}
 const wz=n=>`<div class="wz"><button class="back" data-a="cback" aria-label="뒤로">‹</button><div class="prog"><i style="width:${n*25}%"></i></div><span class="cap num">${n} / 4</span></div>`;
 const lead=(t,sub)=>`<header class="hd" style="padding-top:4px"><h1 class="ttl" style="font-size:28px">${t}</h1><p class="sub">${sub}</p></header>`;
 function viewCreate(){const d=draft;
@@ -731,10 +731,10 @@ function viewCreate(){const d=draft;
      <label for="in-nat" style="flex:1">국적<select id="in-nat">${NATIONS.map(n=>`<option${n===d.nat?' selected':''}>${n}</option>`).join('')}</select></label></div></div>
     <button class="tbtn" data-a="rand">랜덤으로 채우기</button>
     <button class="btn" id="next-btn" data-a="cnext"${d.name.trim()?'':' disabled'}>다음</button>`;
-  if(d.step===3)return wz(3)+lead('드라이빙 스타일을 골라 주세요','세 후보는 능력치 합이 같고, 분포와 잠재력이 다릅니다.')+
+  if(d.step===3)return wz(3)+lead('드라이빙 스타일을 골라 주세요','세 후보는 능력치 합이 같고 분포만 다릅니다.')+
     d.cands.map((c,i)=>{const top=STATS.slice().sort((a,b)=>c.stats[b[0]]-c.stats[a[0]]).slice(0,2);
       return `<button class="card cand${d.sel===i?' on':''}" data-a="cand" data-v="${i}"><div class="between"><div><b style="font-size:18px">${c.name}</b><div class="sub">${c.desc}</div></div><span class="ck">${d.sel===i?'✓':''}</span></div>
-      <div class="tags">${top.map(t=>`<span class="tag">${t[1]} ${c.stats[t[0]]}</span>`).join('')}<span class="tag">잠재력 ${grade(c.pot)}</span></div>
+      <div class="tags">${top.map(t=>`<span class="tag">${t[1]} ${c.stats[t[0]]}</span>`).join('')}</div>
       ${d.sel===i?STATS.map(([k,l])=>`<div class="stat" style="grid-template-columns:86px 1fr 30px"><span>${l}</span><div class="bar"><i style="width:${c.stats[k]}%;background:var(--blue)"></i></div><b class="num">${c.stats[k]}</b></div>`).join(''):''}</button>`}).join('')+
     `<button class="tbtn" data-a="recand"${d.rolls<=0?' disabled':''}>다른 후보 보기 (${d.rolls}회 남음)</button><button class="btn" data-a="cnext">이 스타일로</button>`;
   const c=d.cands[d.sel];
@@ -750,7 +750,7 @@ function phaseBlocks(){
   if(G.phase==='preseason'){
     return `<div class="card"><div><div class="cap">프리시즌</div><div class="ttl">집중해서 키울 능력치</div></div>
     ${G.regNews&&G.tier===GP?'<div class="note">기술 규정이 바뀌어 팀 간 머신 서열이 크게 흔들립니다.</div>':''}
-    ${G.tier===GP&&G.role==='reserve'?'<div class="note">리저브는 주전이 결장할 때만 출전하고 성장도 느립니다. 시즌 중반에 주전보다 기량이 앞서면 시트를 넘겨받습니다.</div>':''}
+    ${G.tier===GP&&G.role==='reserve'?'<div class="note">리저브는 주전이 결장할 때만 출전합니다. 네 라운드마다 팀이 평가해서, 기량이 주전에 근접하면 시즌 중에도 시트를 넘겨받습니다.</div>':''}
     <div class="chips">${STATS.map(([k,l])=>`<button class="chipb${G.focus.includes(k)?' on':''}" data-a="focus" data-v="${k}">${l}</button>`).join('')}</div><p class="sub" style="font-size:13px">최대 2개. 고르지 않으면 고르게 성장합니다.</p>
     <button class="btn" data-a="go">개막전으로</button></div>`}
   if(G.phase==='season'){
@@ -806,7 +806,7 @@ function lastCard(){const L=G.last; if(!L||turnOpen||offerOpen!=null||(G.phase!=
   ${L.ev?`<div class="note">${esc(L.ev)}</div>`:''}</div>`}
 function raceTab(){const T=TIERS[G.tier];
   return head(`${G.year} 시즌`,`${T.name} · ${esc(teamName())}${G.tier===GP&&G.role==='reserve'?' · 리저브':''}`)+
-  `<button class="card strip" data-a="tab" data-v="me">${himg(G.helmet||0,40)}<div class="g" style="flex:1"><b>${esc(G.name)}</b><span class="sub">${G.age}세 · 잠재력 ${grade(G.pot)}</span></div><div class="ovr">${Math.floor(ovrOf(G.stats))}<small>OVR</small></div></button>`+
+  `<button class="card strip" data-a="tab" data-v="me">${himg(G.helmet||0,40)}<div class="g" style="flex:1"><b>${esc(G.name)}</b><span class="sub">#${G.num||1} · ${G.age}세</span></div><div class="ovr">${Math.floor(ovrOf(G.stats))}<small>OVR</small></div></button>`+
   phaseBlocks()+lastCard()}
 function tableTab(){
   const st=standings(), L=G.last, T=TIERS[G.tier];
@@ -819,7 +819,7 @@ function tableTab(){
   return head('순위',`${G.year} ${T.name}`)+`<div class="seg"><button class="${seg!=='race'?'on':''}" data-a="seg" data-v="champ">챔피언십</button><button class="${seg==='race'?'on':''}" data-a="seg" data-v="race">지난 레이스</button></div>`+body}
 function meTab(){const s=G.stats,T=TIERS[G.tier];
   return head(esc(G.name),`#${G.num||1} · ${G.age}세 · ${esc(G.nat)}`)+
-  `<div class="card"><div class="between"><div class="tags"><span class="tag">${T.short}</span><span class="tag">${esc(teamName())}</span>${G.tier===GP?`<span class="tag">${G.role==='race'?'레이스 드라이버':'리저브'}</span><span class="tag">머신 ${carRank(G.team)}위</span>`:''}<span class="tag">잠재력 ${grade(G.pot)}</span></div><div class="ovr xl">${Math.floor(ovrOf(s))}<small>OVR</small></div></div></div>
+  `<div class="card"><div class="between"><div class="tags"><span class="tag">${T.short}</span><span class="tag">${esc(teamName())}</span>${G.tier===GP?`<span class="tag">${G.role==='race'?'레이스 드라이버':'리저브'}</span><span class="tag">머신 ${carRank(G.team)}위</span>`:''}</div><div class="ovr xl">${Math.floor(ovrOf(s))}<small>OVR</small></div></div></div>
   <div class="card">${STATS.map(([k,l])=>{const dv=G.deltas[k]||0;return `<div class="stat"><span>${l}</span><div class="bar"><i style="width:${s[k]}%"></i></div><b class="num">${Math.floor(s[k])}</b><span class="d">${dv>=.05?'+'+dv.toFixed(1):''}</span></div>`}).join('')}</div>
   <div class="gl">계약</div><div class="card"><div class="kvs"><div class="kv" style="border-top:0"><span>소속</span><b>${esc(teamName())}</b></div><div class="kv"><span>계약</span><b>${G.phase==='offseason'?(G.contract.years>0?G.contract.years+'년 남음':'만료'):G.contract.years+'년 남음 (이번 시즌 포함)'}</b></div><div class="kv"><span>연봉</span><b class="num">${won(G.contract.salary)}</b></div><div class="kv"><span>보유 자금</span><b class="num">${won(G.money)}</b></div></div></div>
   <div class="card"><div class="tiles"><div><b class="purple">${G.tot.titles}</b><span>챔피언</span></div><div><b>${G.tot.wins}</b><span>우승</span></div><div><b>${G.tot.podiums}</b><span>포디움</span></div><div><b>${G.tot.poles}</b><span>폴</span></div></div></div>
@@ -876,7 +876,7 @@ app.addEventListener('click',ev=>{
   render();
 });
 function start(data){
-  G=(data&&data.G)||store.get(SAVE); if(G&&G.v!==2)G=null; if(G){G.owned=G.owned||[];G.perm=G.perm||{grow:0,mental:0};G.contract=G.contract||{years:0,salary:0};G.money=G.money||0;if(G.offers)G.offers.forEach(x=>{if(x.salary==null){x.salary=0;x.maxY=1;x.years=1}});G.seen=G.seen||[];G.buff=G.buff||{grow:1,car:0};G.act=G.act||{grow:1,car:0};G.s0=G.s0||{ovr:ovrOf(G.stats),stats:{...G.stats}}}
+  G=(data&&data.G)||store.get(SAVE); if(G&&G.v!==2)G=null; if(G){G.pot=POT;G.owned=G.owned||[];G.perm=G.perm||{grow:0,mental:0};G.contract=G.contract||{years:0,salary:0};G.money=G.money||0;if(G.offers)G.offers.forEach(x=>{if(x.salary==null){x.salary=0;x.maxY=1;x.years=1}});G.seen=G.seen||[];G.buff=G.buff||{grow:1,car:0};G.act=G.act||{grow:1,car:0};G.s0=G.s0||{ovr:ovrOf(G.stats),stats:{...G.stats}}}
   if(G&&!Array.isArray(G.focus))G.focus=G.focus?[G.focus]:[]; if(G&&G.phase==='event'){G.phase='season';G.event=null}
   newDraft(); render();
 }
