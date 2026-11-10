@@ -55,7 +55,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .list{background:var(--surface);border-radius:18px;overflow:hidden}
 .rw{display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;background:none;border:0;border-top:1px solid var(--line);text-align:left;min-width:0}
 .rw:first-child{border-top:0}
-button.rw{cursor:pointer} button.rw:active{background:var(--raise)}
+button.rw{cursor:pointer} button.rw:disabled{cursor:default} button.rw:active{background:var(--raise)}
 .rw .g{flex:1;min-width:0;display:flex;flex-direction:column}
 .rw .g b{font-weight:600;overflow-wrap:anywhere} .rw .g span{color:var(--muted);font-size:13px}
 .rw .v{font-weight:600;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
@@ -129,10 +129,10 @@ button.rw{cursor:pointer} button.rw:active{background:var(--raise)}
 'use strict';
 /* ---------- data ---------- */
 const TIERS=[
- {name:'카트 선수권',short:'KART',rounds:6,base:36,cw:.25},
- {name:'포뮬러 4',short:'F4',rounds:7,base:47,cw:.3},
- {name:'포뮬러 3',short:'F3',rounds:8,base:57,cw:.35},
- {name:'포뮬러 2',short:'F2',rounds:10,base:66,cw:.35},
+ {name:'카트 선수권',short:'KART',rounds:5,base:34,cw:.25},
+ {name:'포뮬러 4',short:'F4',rounds:5,base:43,cw:.3},
+ {name:'포뮬러 3',short:'F3',rounds:6,base:52,cw:.35},
+ {name:'포뮬러 2',short:'F2',rounds:8,base:61,cw:.35},
  {name:'F1 월드 챔피언십',short:'F1',rounds:16,cw:.55}];
 const GP=4;
 const TEAMS=[['메르세데스','#27c8b4',94],['페라리','#e0282d',91],['맥라렌','#f58020',90],['레드불 레이싱','#3b63c9',87],['하스','#9aa0a8',80],
@@ -160,7 +160,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rname=()=>pick(FIRST)+' '+pick(LAST);
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
-let G=null, draft=null, confirmRetire=false, confirmNew=false, tab='race', seg='champ', turnOpen=false, offerOpen=null, offerYears=2;
+let G=null, draft=null, confirmRetire=false, confirmNew=false, tab='race', seg='champ', turnOpen=false, offerOpen=null, offerYears=2, shopSel=null, shopMsg='';
 
 const ovrOf=s=>s.pace*.25+s.race*.25+s.ovt*.15+s.tyre*.15+s.wet*.1+s.mental*.1;
 const grade=p=>p>=94?'S':p>=88?'A':p>=82?'B':p>=76?'C':'D';
@@ -198,23 +198,23 @@ function startCareer(){
   const cd=draft.cands[draft.sel], s={...cd.stats};
   G={v:2,nid:1,name:draft.name.trim()||'이름 없는 드라이버',nat:draft.nat,num:draft.num,helmet:draft.helmet,style:cd.style,age:15,year:2026,pot:cd.pot,stats:s,
      tier:0,role:'race',jr:{name:pick(JR_TEAMS),bonus:0},team:null,focus:draft.focus.slice(),phase:'preseason',
-     tot:{titles:0,wins:0,podiums:0,poles:0,races:0,points:0,jr:0},history:[],last:null,deltas:{},seen:[],buff:{grow:1,car:0},rep:0,turn:null,contract:{years:1,salary:0},money:0};
+     tot:{titles:0,wins:0,podiums:0,poles:0,races:0,points:0,jr:0},history:[],last:null,deltas:{},seen:[],buff:{grow:1,car:0},rep:0,turn:null,contract:{years:1,salary:0},money:0,owned:[],perm:{grow:0,mental:0},shopYear:0};
   newWorld(); startSeason(); save(); render();
 }
 function startSeason(){
-  G.act=G.buff||{grow:1,car:0};G.buff={grow:1,car:0};G.s0={ovr:ovrOf(G.stats),stats:{...G.stats}};
+  G.act=G.buff||{grow:1,car:0};G.buff={grow:1,car:0};if(G.perm&&G.perm.mental)G.stats.mental=Math.min(99,G.stats.mental+G.perm.mental);G.s0={ovr:ovrOf(G.stats),stats:{...G.stats}};
   G.round=0;G.table={};G.ss={wins:0,podiums:0,poles:0,races:0};G.last=null;G.event=null;G.promoNote=null;G.deltas={};
   if(G.tier<GP){
     const T=TIERS[G.tier];
     const fp=freeProspects().sort(()=>R()-.5);
-    G.field=Array.from({length:15},(_,i)=>({key:'a'+i,name:fp[i]||rname(),team:pick(JR_TEAMS),skill:T.base+g()*6+(i<2?6:0),car:70+g()*2}));
+    G.field=Array.from({length:15},(_,i)=>({key:'a'+i,name:fp[i]||rname(),team:pick(JR_TEAMS),skill:T.base+g()*5+(i<2?5:0),car:70+g()*2}));
   }
   G.phase='preseason';
 }
 function teamName(){return G.tier<GP?G.jr.name:G.teams[G.team].name}
 function growth(mult){
   const o=ovrOf(G.stats), a=G.age, af=a<=19?1.25:a<=23?1:a<=27?.6:a<=30?.3:.05;
-  const base=Math.max(0,G.pot-o)*.03*af*mult*((G.act&&G.act.grow)||1); const keys=STATS.map(s=>s[0]); const d={};
+  const base=Math.max(0,G.pot-o)*.03*af*mult*((G.act&&G.act.grow)||1)*(G.tier<GP?1.7:1)*(1+((G.perm&&G.perm.grow)||0)); const keys=STATS.map(s=>s[0]); const d={};
   for(let i=0;i<3;i++){const k=(G.focus.length&&R()<.55)?pick(G.focus):pick(keys); const before=G.stats[k];
     G.stats[k]=Math.min(99,G.pot+4,Math.max(before,before+base*2*(.6+R()*.8))); d[k]=(d[k]||0)+G.stats[k]-before}
   Object.keys(d).forEach(k=>G.deltas[k]=(G.deltas[k]||0)+d[k]);
@@ -241,7 +241,7 @@ function nextRound(auto){
 function setupRace(racing,sub){
   const T=TIERS[G.tier], s=G.stats, wet=R()<.15, E=[], ac=(G.act&&G.act.car)||0; G.deltas={};
   const w=wet?.5:0;
-  const pq=(s.pace*.7+s.mental*.3)*(1-w)+s.wet*w, pr=(s.race*.4+s.tyre*.25+s.ovt*.2+s.mental*.15)*(1-w)+s.wet*w;
+  const pq=(s.pace*.7+s.mental*.3)*(1-w)+s.wet*w, pr=(s.race*.3+s.pace*.2+s.tyre*.2+s.ovt*.15+s.mental*.15)*(1-w)+s.wet*w;
   let subFor=null;
   if(G.tier<GP){G.field.forEach(f=>E.push({key:f.key,name:f.name,team:f.team,car:f.car,q:f.skill,r:f.skill}));
     E.push({key:'P',name:G.name,team:G.jr.name,car:70+G.jr.bonus+ac,q:pq,r:pr,me:1});}
@@ -258,7 +258,7 @@ function setupRace(racing,sub){
 function doRace(racing,sub){
   const c=setupRace(racing,sub), s=G.stats;
   c.E.forEach(e=>{e.dnf=e.me?R()<clamp(.075-(s.mental-50)*.0007,.03,.09):R()<.06;
-    e.rs=e.dnf?-999+R():e.base+(c.n-e.grid)*.12+g()*3*c.nz});
+    e.rs=e.dnf?-999+R():e.base+(c.n-e.grid)*.25+g()*3*c.nz});
   finishRace(c,null);
 }
 function finishRace(c,evText){
@@ -418,6 +418,42 @@ function turnView(){const e=turnDef(), t=G.turn, tx=v=>typeof v==='function'?v()
   <button class="tbtn" data-a="tlater">나중에 생각하기</button>`}
 const todo=()=>G.turn&&!G.turn.done?`<div class="list"><button class="rw" data-a="topen"><span class="dot"></span><div class="g"><b>전환점이 찾아왔어요</b><span>${turnDef().t}</span></div><span class="ch">›</span></button></div>`:'';
 
+/* ---------- shop ---------- */
+const SHOP=[
+ {id:'lesson',ic:'tool',n:'개인 코치 레슨',d:'하루 종일 붙잡고 가르쳐 줍니다. 무작위 능력치 +2',p:.05,fx:{any:2}},
+ {id:'engine',ic:'tool',n:'엔진 튜닝',d:'다음 시즌 머신이 조금 빨라집니다.',p:.15,fx:{car:1}},
+ {id:'mindp',ic:'heart',n:'멘탈 트레이닝 캠프',d:'일주일짜리 집중 프로그램. 멘탈 +3',p:.3,fx:{mental:3}},
+ {id:'wettest',ic:'car',n:'젖은 노면 전세 테스트',d:'살수차를 불러 하루 종일 달립니다. 빗길 +3',p:.5,fx:{wet:3}},
+ {id:'trainer',ic:'heart',n:'전담 트레이너 1년',d:'다음 시즌 성장 +20%',p:1,fx:{grow:.2}},
+ {id:'simrig',ic:'home',n:'홈 시뮬레이터',d:'집에서도 매일 달립니다. 영구히 성장 +8%',p:3,once:1,perm:{grow:.08}},
+ {id:'eng',ic:'tool',n:'개인 퍼포먼스 엔지니어',d:'다음 시즌 머신이 크게 좋아집니다.',p:6,fx:{car:2}},
+ {id:'super',ic:'car',n:'슈퍼카',d:'차고에 세워 두기만 해도 기분이 좋습니다. 멘탈 +3, 평판 +1',p:10,once:1,fx:{mental:3,rep:1}},
+ {id:'kart',ic:'car',n:'내 이름을 건 카트장',d:'초심으로 돌아가는 곳. 잠재력 +1, 멘탈 +2',p:25,once:1,fx:{pot:1,mental:2}},
+ {id:'apt',ic:'home',n:'모나코 아파트',d:'항구가 보이는 집. 매 시즌 멘탈 +1',p:40,once:1,perm:{mental:1}},
+ {id:'yacht',ic:'boat',n:'요트',d:'그랑프리 주말마다 항구에 띄웁니다. 멘탈 +5, 평판 +2',p:60,once:1,fx:{mental:5,rep:2}},
+ {id:'jet',ic:'plane',n:'전용기',d:'이동 피로가 사라집니다. 영구히 성장 +6%',p:90,once:1,perm:{grow:.06}}
+];
+const IMAP={car:['..........','...kkkk...','..kaawak..','kkaaaaaakk','kaaaaaaaak','kkkkkkkkkk','.kk....kk.','.kk....kk.'],home:['....kk....','...kaak...','..kaaaak..','.kaaaaaak.','kkkkkkkkkk','.kaawwak..','.kaawwak..','.kkkkkkk..'],
+ plane:['....k.....','....kk....','k...kak...','kkkkkaakkk','kaaaaaaaak','kkkkkaakkk','k...kak...','....kk....'],boat:['....k.....','....kk....','....kak...','....kaak..','....kkkk..','kkkkkkkkkk','.kaaaaaak.','..kkkkkk..'],
+ tool:['...kkkk...','..kaaaak..','.kaakkaak.','.kakwwkak.','.kakwwkak.','.kaakkaak.','..kaaaak..','...kkkk...'],heart:['.kk....kk.','kaak..kaak','kaaakkaaak','kaaaaaaaak','.kaaaaaak.','..kaaaak..','...kaak...','....kk....']};
+const ICOL={car:'#e0282d',home:'#ffd21f',plane:'#2a9be8',boat:'#27c8b4',tool:'#9aa0a8',heart:'#e868b3'}, icache={};
+function icon(t){ if(icache[t])return icache[t]; const c=document.createElement('canvas');c.width=10;c.height=8;const x=c.getContext('2d'),col={k:'#16161a',a:ICOL[t],w:'#cfe3ff'};
+  IMAP[t].forEach((r,y)=>[...r].forEach((ch,xx)=>{if(col[ch]){x.fillStyle=col[ch];x.fillRect(xx,y,1,1)}})); return icache[t]=c.toDataURL()}
+const shopOpen=()=>G.shopYear!==G.year&&G.phase!=='retired';
+function buy(id){const it=SHOP.find(x=>x.id===id); if(!it||!shopOpen()||G.money<it.p||G.owned.includes(id))return;
+  G.money-=it.p; G.shopYear=G.year; const out=fx(it.fx||{});
+  if(it.perm){for(const k in it.perm)G.perm[k]+=it.perm[k]; out.push(it.perm.grow?`영구 성장 +${Math.round(it.perm.grow*100)}%`:'매 시즌 멘탈 +1')}
+  if(it.once)G.owned.push(id); shopMsg=`${it.n} 구입 완료. ${out.join(' · ')}`; shopSel=null; save()}
+function shopTab(){const open=shopOpen(), sel=SHOP.find(x=>x.id===shopSel);
+  return head('상점',`보유 자금 ${won(G.money)}`)+
+  (shopMsg?`<div class="card flash"><p>${esc(shopMsg)}</p></div>`:'')+
+  (sel&&open?`<div class="card flash"><div class="between" style="justify-content:flex-start"><img class="px" src="${icon(sel.ic)}" width="50" height="40" alt=""><div><div class="ttl" style="font-size:20px">${sel.n}</div><div class="sub">${sel.d}</div></div></div>
+    <div class="kvs"><div class="kv"><span>가격</span><b class="num">${won(sel.p)}</b></div><div class="kv"><span>구입 후 자금</span><b class="num">${won(G.money-sel.p)}</b></div></div>
+    <button class="btn" data-a="buyok">구입한다</button><button class="tbtn" data-a="buyno">취소</button></div>`:
+   `<p class="hint">${open?'한 시즌에 하나만 살 수 있습니다. 신중하게 고르세요.':G.phase==='retired'?'은퇴한 드라이버는 상점을 이용할 수 없습니다.':'이번 시즌 구매를 마쳤습니다. 다음 시즌에 다시 열립니다.'}</p>`)+
+  `<div class="list">${SHOP.map(it=>{const own=G.owned.includes(it.id), can=open&&!own&&G.money>=it.p;
+    return `<button class="rw" data-a="buy" data-v="${it.id}"${can?'':' disabled'}><img class="px" src="${icon(it.ic)}" width="40" height="32" alt="" style="${can||own?'':'opacity:.45'}"><div class="g"><b>${it.n}</b><span>${it.d}</span></div><span class="v${can?'':' mut'}">${own?'보유 중':won(it.p)}</span></button>`}).join('')}</div>`}
+
 /* ---------- live race ---------- */
 let RC=null;
 const JRCOL=['#e0282d','#2a9be8','#f58020','#27c8b4','#e868b3','#d6b21f','#8d6ad9','#c9ccd4','#3aa76d','#b8443a'];
@@ -440,7 +476,7 @@ function buildTrack(seed,wet){
 }
 function startLive(sub){
   const c=setupRace(true,sub), L=G.tier===0?8:G.tier<3?10:12;
-  c.E.forEach(e=>{e.P=e.P0=-(e.grid-1)*.2;e.col=e.color||JRCOL[hash(e.team)%10];e.dnfLap=R()<.06?ri(1,L):0;e.pitLap=ri(Math.round(L*.3),Math.round(L*.7))});
+  c.E.forEach(e=>{e.P=e.P0=-(e.grid-1)*.25;e.col=e.color||JRCOL[hash(e.team)%10];e.dnfLap=R()<.06?ri(1,L):0;e.pitLap=ri(Math.round(L*.3),Math.round(L*.7))});
   RC={c,L,me:c.me,lap:0,t:0,spd:1,mode:1,boost:3,boostOn:0,wear:0,pits:0,pitQ:0,mod:0,crash:0,sc:0,pit:G.tier>=3,rained:c.wet,used:{},
     msg:'포메이션 랩을 마치고 그리드에 섰습니다.',track:buildTrack(G.round+1,c.wet),cps:[Math.round(L*.25),Math.round(L*.5),Math.round(L*.75),L-1],ev:null,paused:true,fin:false,started:false,lt:0};
   RC.ev=liveEvent(); render(); requestAnimationFrame(tick);
@@ -579,7 +615,7 @@ function endSeason(){
   if(G.tier===GP&&G.role==='race'){const m=teamDrivers(G.team)[0];if(m){const r=G.table['d'+m.id];mate={name:m.name,pts:r?r.pts:0}}}
   G.history.push({year:G.year,age:G.age,series:TIERS[G.tier].short,team:teamName(),role:G.role,pos,pts:idx<0?0:st[idx].pts,wins:G.ss.wins,pod:G.ss.podiums,champ});
   G.seasonEnd={pos,champ,pts:idx<0?0:st[idx].pts,mate,winner:st[0]&&st[0].name};
-  G.money+=G.contract.salary;G.seasonEnd.paid=G.contract.salary;G.contract.years=Math.max(0,G.contract.years-1);
+  G.money+=G.contract.salary;G.seasonEnd.paid=G.contract.salary;G.seasonEnd.prize=+(G.seasonEnd.pts*[.001,.002,.004,.008,.05][G.tier]).toFixed(3);G.money+=G.seasonEnd.prize;G.contract.years=Math.max(0,G.contract.years-1);
   G.offers=makeOffers(pos,mate);G.rep=0;newTurn();G.phase='offseason';confirmRetire=false;
 }
 function makeOffers(pos,mate){
@@ -589,18 +625,18 @@ function makeOffers(pos,mate){
       const mine=G.tier===GP&&G.team===i; if(mine&&G.role==='race')return;
       const sc=ovr+(age<=23?3:0)+rep+(G.rep||0)+g()*2;
       if(sc>=weak.ovr)res.push({type:'gp',team:i,role:'race'});
-      else if((sc>=weak.ovr-9&&age<=27)||mine)res.push({type:'gp',team:i,role:'reserve'})});
+      else if((sc>=weak.ovr-12&&age<=27)||mine)res.push({type:'gp',team:i,role:'reserve'})});
     const race=res.filter(r=>r.role==='race').sort((a,b)=>G.teams[b.team].car-G.teams[a.team].car).slice(0,3);
     const rsv=res.filter(r=>r.role==='reserve').sort((a,b)=>G.teams[b.team].car-G.teams[a.team].car).slice(0,2);
     return race.concat(rsv)};
   if(G.tier<GP){
     if(age>26){return o}                         // funding runs out
-    const nt=G.tier+1;
-    if(nt<GP){
-      if(pos===1){o.push({type:'jr',tier:nt,name:pick(JR_TEAMS),bonus:3},{type:'jr',tier:nt,name:pick(JR_TEAMS),bonus:0})}
-      else if(pos<=3){o.push({type:'jr',tier:nt,name:pick(JR_TEAMS),bonus:0},{type:'jr',tier:nt,name:pick(JR_TEAMS),bonus:-3})}
-      else if(pos<=6&&ovr>=TIERS[nt].base-7)o.push({type:'jr',tier:nt,name:pick(JR_TEAMS),bonus:-3});
-    }else if(pos<=5){gpOffers(pos===1?4:pos<=3?2:0).forEach(x=>o.push(x))}
+    const nt=G.tier+1, J=(tier,bonus,skip)=>({type:'jr',tier,name:pick(JR_TEAMS),bonus,skip});
+    if(pos&&nt<GP){
+      if(pos===1)o.push(J(nt,3),J(nt,0)); else if(pos<=3)o.push(J(nt,0),J(nt,-3)); else if(pos<=10||G.history.filter(h=>h.series===TIERS[G.tier].short).length>=2)o.push(J(nt,-3));
+      if(pos<=3&&nt+1<GP&&ovr>=TIERS[nt+1].base-2)o.push(J(nt+1,pos===1?0:-3,1));
+      if(pos<=2&&nt+1===GP)gpOffers(pos===1?2:0).forEach(x=>o.push(x));
+    }else if(pos&&pos<=8){gpOffers(pos===1?4:pos<=3?2:0).forEach(x=>o.push(x))}
     o.push({type:'jr',tier:G.tier,name:pos<=5?pick(JR_TEAMS):G.jr.name,bonus:pos<=5?2:G.jr.bonus,stay:1});
   }else{
     let rep=0, dropped=false;
@@ -728,12 +764,13 @@ function phaseBlocks(){
   if(G.phase==='offseason'){const e=G.seasonEnd;
     const hd=e.champ?(G.tier===GP?'월드 챔피언':T.short+' 챔피언'):e.pos?`시즌 ${e.pos}위`:'출전 없이 시즌 종료';
     const offers=G.offers.map((o,i)=>{const term=o.locked?`계약 ${o.years}년 남음 · 연 ${won(o.salary)}`:`${o.maxY>1?'최대 '+o.maxY+'년':'1년'} · 연 ${won(o.salary)}${o.fee?' · 위약금 '+won(o.fee):''}`;
-      if(o.type==='jr'){const t=TIERS[o.tier];return `<button class="rw" data-a="offer" data-v="${i}">${sw()}<div class="g"><b>${esc(o.name)}</b><span>${t.short} ${o.stay?'잔류':o.back?'복귀':'승격'} · ${o.bonus>0?'명문 팀':o.bonus<0?'약체 팀':'중위권 팀'}</span><span>${term}</span></div><span class="ch">›</span></button>`}
+      if(o.type==='jr'){const t=TIERS[o.tier];return `<button class="rw" data-a="offer" data-v="${i}">${sw()}<div class="g"><b>${esc(o.name)}</b><span>${t.short} ${o.stay?'잔류':o.back?'복귀':o.skip?'월반':'승격'} · ${o.bonus>0?'명문 팀':o.bonus<0?'약체 팀':'중위권 팀'}</span><span>${term}</span></div><span class="ch">›</span></button>`}
       const t=G.teams[o.team];
       return `<button class="rw" data-a="offer" data-v="${i}">${sw(t.color)}<div class="g"><b>${esc(t.name)}</b><span>${o.locked?'잔류':o.stay?'재계약':o.fee?'이적':'제안'} · ${o.role==='race'?'레이스 시트':'리저브'} · 머신 ${carRank(o.team)}위</span><span>${term}</span></div><span class="ch">›</span></button>`}).join('');
     return `<div class="card flash"><div><div class="cap">${G.year} 시즌 종료</div><div class="ttl${e.champ?' purple':''}">${hd}</div></div>
     <div class="kvs"><div class="kv"><span>출전</span><b class="num">${G.ss.races}경기 · ${e.pts} PTS</b></div><div class="kv"><span>우승 · 포디움</span><b class="num">${G.ss.wins}승 · ${G.ss.podiums}회</b></div>
     ${e.champ?'':`<div class="kv"><span>챔피언</span><b>${esc(e.winner||'-')}</b></div>`}
+    <div class="kv"><span>수입</span><b class="num">연봉 ${won(e.paid||0)} · 상금 ${won(e.prize||0)}</b></div>
     <div class="kv"><span>종합 능력치</span><b class="num">${Math.floor(G.s0.ovr)} → ${Math.floor(ovrOf(G.stats))} ${up(ovrOf(G.stats)-G.s0.ovr)}</b></div>
     ${STATS.map(([k,l])=>[l,G.stats[k],G.stats[k]-G.s0.stats[k]]).sort((a,b)=>b[2]-a[2]).slice(0,2).map(x=>`<div class="kv"><span>${x[0]}</span><b class="num">${Math.floor(x[1])} ${up(x[2])}</b></div>`).join('')}</div>
     ${e.dropped?`<div class="note">팀이 당신을 내보내기로 했습니다. 팀메이트와의 격차가 너무 컸습니다.${e.payout?` 남은 계약의 절반인 ${won(e.payout)}을 보상금으로 받았습니다.`:''}</div>`:''}
@@ -788,12 +825,12 @@ function meTab(){const s=G.stats,T=TIERS[G.tier];
   <div class="card"><div class="tiles"><div><b class="purple">${G.tot.titles}</b><span>챔피언</span></div><div><b>${G.tot.wins}</b><span>우승</span></div><div><b>${G.tot.podiums}</b><span>포디움</span></div><div><b>${G.tot.poles}</b><span>폴</span></div></div></div>
   ${G.history.length?`<div class="gl">커리어 기록</div><div class="list">${G.history.slice().reverse().map(h=>`<div class="rw"><div class="g"><b>${h.year} ${h.series}${h.role==='reserve'?' 리저브':''}</b><span>${esc(h.team)}</span></div><span class="v${h.champ?' purple':''}">${h.pos?'P'+h.pos:'–'}<small>${h.pts} PTS · ${h.wins}승</small></span></div>`).join('')}</div>`:''}
   ${confirmNew?`<div class="card"><p>지금 커리어를 지우고 새로 시작할까요?</p><button class="btn" data-a="newno">취소</button><button class="tbtn red" data-a="newyes">지우고 새로 시작</button></div>`:`<button class="tbtn red" data-a="new">새 커리어 시작</button>`}`+FOOT}
-const ICON={race:'<path d="M6 21V4"/><path d="M6 5c4-2 6 2 12 0v9c-6 2-8-2-12 0"/>',table:'<path d="M9 7h11M9 12h11M9 17h11"/><path d="M4.5 7h.01M4.5 12h.01M4.5 17h.01"/>',me:'<circle cx="12" cy="8.5" r="3.6"/><path d="M5 20c.8-3.8 3.6-5.6 7-5.6s6.2 1.8 7 5.6"/>'};
-function tabbar(){return `<nav class="tabbar"><div>${[['race','레이스'],['table','순위'],['me','드라이버']].map(([k,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k?'on':''}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg><span>${l}</span></button>`).join('')}</div></nav>`}
+const ICON={shop:'<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',race:'<path d="M6 21V4"/><path d="M6 5c4-2 6 2 12 0v9c-6 2-8-2-12 0"/>',table:'<path d="M9 7h11M9 12h11M9 17h11"/><path d="M4.5 7h.01M4.5 12h.01M4.5 17h.01"/>',me:'<circle cx="12" cy="8.5" r="3.6"/><path d="M5 20c.8-3.8 3.6-5.6 7-5.6s6.2 1.8 7 5.6"/>'};
+function tabbar(){return `<nav class="tabbar"><div>${[['race','레이스'],['table','순위'],['shop','상점'],['me','드라이버']].map(([k,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k?'on':''}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg><span>${l}</span></button>`).join('')}</div></nav>`}
 function render(){
   if(!G){app.innerHTML=viewCreate();return}
   if(RC){liveShell();return}
-  app.innerHTML=(tab==='table'?tableTab():tab==='me'?meTab():raceTab())+tabbar();
+  app.innerHTML=(tab==='table'?tableTab():tab==='me'?meTab():tab==='shop'?shopTab():raceTab())+tabbar();
 }
 function newDraft(){draft={step:0,helmet:0,name:'',num:ri(2,99),nat:'대한민국',cands:mkCands(),sel:0,rolls:3,focus:[]}}
 function syncDraft(){const n=document.getElementById('in-name'),s=document.getElementById('in-nat'),u=document.getElementById('in-num');if(n)draft.name=n.value;if(s)draft.nat=s.value;if(u)draft.num=clamp(parseInt(u.value)||draft.num,2,99)}
@@ -802,8 +839,11 @@ app.addEventListener('click',ev=>{
   const b=ev.target.closest('[data-a]'); if(!b)return; const a=b.dataset.a,v=b.dataset.v;
   if(a[0]==='l'&&RC&&a!=='lev0'){liveAct(a,v);return}
   if(!G)syncDraft();
-  if(a==='tab'){tab=v;turnOpen=false;offerOpen=null;confirmNew=false;window.scrollTo(0,0)}
+  if(a==='tab'){shopSel=null;shopMsg='';tab=v;turnOpen=false;offerOpen=null;confirmNew=false;window.scrollTo(0,0)}
   else if(a==='seg'){seg=v}
+  else if(a==='buy'){shopSel=v;shopMsg='';window.scrollTo(0,0)}
+  else if(a==='buyno'){shopSel=null}
+  else if(a==='buyok'){buy(shopSel)}
   else if(a==='topen'){turnOpen=true;window.scrollTo(0,0)}
   else if(a==='tlater'||a==='tok'){turnOpen=false}
   else if(a==='tpick'){chooseTurn(+v)}
@@ -836,7 +876,7 @@ app.addEventListener('click',ev=>{
   render();
 });
 function start(data){
-  G=(data&&data.G)||store.get(SAVE); if(G&&G.v!==2)G=null; if(G){G.contract=G.contract||{years:0,salary:0};G.money=G.money||0;if(G.offers)G.offers.forEach(x=>{if(x.salary==null){x.salary=0;x.maxY=1;x.years=1}});G.seen=G.seen||[];G.buff=G.buff||{grow:1,car:0};G.act=G.act||{grow:1,car:0};G.s0=G.s0||{ovr:ovrOf(G.stats),stats:{...G.stats}}}
+  G=(data&&data.G)||store.get(SAVE); if(G&&G.v!==2)G=null; if(G){G.owned=G.owned||[];G.perm=G.perm||{grow:0,mental:0};G.contract=G.contract||{years:0,salary:0};G.money=G.money||0;if(G.offers)G.offers.forEach(x=>{if(x.salary==null){x.salary=0;x.maxY=1;x.years=1}});G.seen=G.seen||[];G.buff=G.buff||{grow:1,car:0};G.act=G.act||{grow:1,car:0};G.s0=G.s0||{ovr:ovrOf(G.stats),stats:{...G.stats}}}
   if(G&&!Array.isArray(G.focus))G.focus=G.focus?[G.focus]:[]; if(G&&G.phase==='event'){G.phase='season';G.event=null}
   newDraft(); render();
 }
