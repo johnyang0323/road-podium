@@ -9,100 +9,96 @@
 <style>body{margin:0}[hidden]{display:none!important}</style>
 <title>포디움 로드</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Saira+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
-/* Layout: timing-screen app. Left = driver telemetry card, right = pit wall (action, classification, standings). Stacks on phones. */
+/* Layout: one narrow column, one job per screen. Three tabs (레이스 / 순위 / 드라이버) on a bottom bar; grouped lists and large titles. */
 :root{
-  --bg:#f1f2f6; --surface:#ffffff; --raise:#e8eaf1; --ink:#12141d; --muted:#5b6173; --line:#d6d9e3;
-  --purple:#7a2bd4; --green:#0b8f55; --yellow:#a87800; --red:#cc2f3a; --on-accent:#ffffff;
-  --display:"Saira Condensed","IBM Plex Sans KR",system-ui,sans-serif;
-  --body:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
-  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --bg:#f2f2f7; --surface:#ffffff; --raise:#e9e9ee; --ink:#1c1c1e; --muted:#6e6e73; --line:#dcdce1;
+  --blue:#0071e3; --on-blue:#ffffff; --green:#1f8a3b; --red:#d70015; --purple:#8944ab; --bar:rgba(249,249,251,.84);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Pretendard","Noto Sans KR","Malgun Gothic","Segoe UI",system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#0e1017; --surface:#171a24; --raise:#202431; --ink:#eceef6; --muted:#949bae; --line:#2b3040;
-  --purple:#b884ff; --green:#30d18b; --yellow:#f1c644; --red:#ff6672; --on-accent:#12091f; color-scheme:dark } }
+  --bg:#000000; --surface:#1c1c1e; --raise:#2c2c2e; --ink:#f5f5f7; --muted:#98989f; --line:#38383a;
+  --blue:#0a84ff; --on-blue:#ffffff; --green:#30d158; --red:#ff453a; --purple:#bf5af2; --bar:rgba(22,22,24,.84); color-scheme:dark } }
 :root[data-theme="dark"]{
-  --bg:#0e1017; --surface:#171a24; --raise:#202431; --ink:#eceef6; --muted:#949bae; --line:#2b3040;
-  --purple:#b884ff; --green:#30d18b; --yellow:#f1c644; --red:#ff6672; --on-accent:#12091f; color-scheme:dark }
+  --bg:#000000; --surface:#1c1c1e; --raise:#2c2c2e; --ink:#f5f5f7; --muted:#98989f; --line:#38383a;
+  --blue:#0a84ff; --on-blue:#ffffff; --green:#30d158; --red:#ff453a; --purple:#bf5af2; --bar:rgba(22,22,24,.84); color-scheme:dark }
 
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;
-  padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-#app{max-width:1060px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
-h1,h2,h3,p{margin:0}
-.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.brand{font-family:var(--display);font-weight:800;font-size:30px;letter-spacing:.02em;line-height:1;text-transform:uppercase}
-.brand small{font-family:var(--body);font-weight:500;font-size:13px;color:var(--muted);letter-spacing:0;text-transform:none;margin-left:10px}
-.lights{display:inline-flex;gap:4px;margin-right:10px;vertical-align:2px}
-.lights i{width:9px;height:9px;border-radius:50%;background:var(--red)}
-.linkbtn{background:none;border:0;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:4px}
-.grid{display:grid;grid-template-columns:330px minmax(0,1fr);gap:16px;align-items:start}
-.col{display:flex;flex-direction:column;gap:16px;min-width:0}
-@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
-.panel>h2{font-size:12px;font-weight:600;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
-.eyebrow{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
-.big{font-family:var(--display);font-weight:800;font-size:34px;line-height:1.05;text-wrap:balance}
-.mid{font-size:19px;font-weight:700;line-height:1.3;text-wrap:balance}
-.muted{color:var(--muted)} .small{font-size:13px}
-.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
-.stack{display:flex;flex-direction:column;gap:12px}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-
-/* driver card */
-.dhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-.dname{font-size:20px;font-weight:700;line-height:1.2;overflow-wrap:anywhere}
-.ovr{font-family:var(--display);font-weight:800;font-size:52px;line-height:.9;text-align:right}
-.ovr span{display:block;font-family:var(--mono);font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.06em;margin-top:4px;white-space:nowrap}
-.chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{font-size:12px;font-weight:600;padding:2px 8px;border-radius:3px;background:var(--raise);color:var(--ink);white-space:nowrap}
-.chip.p{background:var(--purple);color:var(--on-accent)} .chip.g{color:var(--green)} .chip.y{color:var(--yellow)} .chip.r{color:var(--red)}
-.stats{display:grid;grid-template-columns:1fr;gap:7px}
-@media (max-width:860px) and (min-width:520px){.stats{grid-template-columns:1fr 1fr;column-gap:20px}}
-.stat{display:grid;grid-template-columns:64px 1fr 30px 38px;gap:8px;align-items:center;font-size:13px}
-.bar{height:6px;background:var(--raise);border-radius:1px;overflow:hidden}
-.bar i{display:block;height:100%;background:var(--ink)}
-.stat .d{font-family:var(--mono);font-size:11px;color:var(--green);text-align:right}
-.tot{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
-.tot b{display:block;font-family:var(--display);font-size:26px;line-height:1}
-.tot span{font-size:11px;color:var(--muted)}
-.tot .champ b{color:var(--purple)}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;
+  padding-block:20px 120px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#app{max-width:540px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1,h2,p{margin:0}
+button{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.hd{padding:14px 4px 2px}
+.lt{font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1.15;overflow-wrap:anywhere}
+.sub{color:var(--muted);font-size:15px}
+.cap{color:var(--muted);font-size:13px;font-weight:600}
+.ttl{font-size:24px;font-weight:700;letter-spacing:-.015em;line-height:1.2;text-wrap:balance}
+.gl{color:var(--muted);font-size:13px;font-weight:600;padding:8px 16px 0}
+.hint{color:var(--muted);font-size:13px;padding:0 16px}
+.card{background:var(--surface);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.between{display:flex;flex-direction:row;justify-content:space-between;align-items:center;gap:12px}
+.note{background:var(--raise);border-radius:12px;padding:10px 12px;font-size:14px}
+.purple{color:var(--purple)} .green{color:var(--green)} .red{color:var(--red)} .mut{color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
 
 /* buttons */
-button.btn{font:inherit;font-weight:600;border:1px solid var(--ink);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:4px;cursor:pointer}
-button.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
-button.btn.danger{background:transparent;color:var(--red);border-color:var(--red)}
-button.btn:hover{filter:brightness(1.15)} button.btn.ghost:hover{border-color:var(--ink);filter:none}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
-.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
-.opt{font:inherit;text-align:left;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-width:0}
-.opt:hover{border-color:var(--ink)} .opt.on{border-color:var(--purple);box-shadow:inset 0 0 0 1px var(--purple)}
-.opt b{font-size:15px} .opt span{font-size:13px;color:var(--muted)}
-.opt .tag{font-family:var(--mono);font-size:11px;color:var(--muted)}
-input[type=text],select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:9px 10px;width:100%}
-label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;flex:1 1 180px;min-width:0}
+.btn{display:block;width:100%;border:0;border-radius:14px;background:var(--blue);color:var(--on-blue);font-weight:600;font-size:17px;padding:14px;cursor:pointer}
+.btn:active{opacity:.8}
+.tbtn{background:none;border:0;color:var(--blue);font-size:16px;padding:8px;cursor:pointer;align-self:center}
+.tbtn.red{color:var(--red)}
+.pill{border:0;border-radius:999px;background:var(--raise);color:var(--blue);font-weight:600;font-size:15px;padding:8px 14px;cursor:pointer;white-space:nowrap}
+.pill:disabled{color:var(--muted);cursor:default}
 
-/* timing tower */
-.tw{overflow-x:auto}
-table{border-collapse:collapse;width:100%;font-size:13px}
-th{font-size:11px;font-weight:600;color:var(--muted);text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
-td{padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
-tr:last-child td{border-bottom:0}
-td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
-td.pos{font-family:var(--mono);font-weight:700;width:34px}
-tr.me td{background:var(--raise);font-weight:700}
-tr.gap td{padding:0;height:6px;border-bottom:1px dashed var(--line)}
-.sw{display:inline-block;width:4px;height:14px;margin-right:7px;vertical-align:-2px;border-radius:1px}
-.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-.res{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end}
-.res .p{font-family:var(--display);font-weight:800;font-size:64px;line-height:.85}
-.res .p.purple{color:var(--purple)} .res .p.green{color:var(--green)} .res .p.red{color:var(--red)}
-.prog{display:flex;gap:3px} .prog i{flex:1;height:5px;background:var(--raise);border-radius:1px} .prog i.done{background:var(--ink)}
-.foot{font-size:12px;color:var(--muted);max-width:70ch}
-.note{border-left:3px solid var(--yellow);padding:6px 10px;background:var(--raise);font-size:13px;border-radius:0 3px 3px 0}
-@media (prefers-reduced-motion:no-preference){.flash{animation:fl .35s ease-out}}
-@keyframes fl{from{transform:translateY(4px);opacity:.4}to{transform:none;opacity:1}}
+/* grouped list */
+.list{background:var(--surface);border-radius:18px;overflow:hidden}
+.rw{display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;background:none;border:0;border-top:1px solid var(--line);text-align:left;min-width:0}
+.rw:first-child{border-top:0}
+button.rw{cursor:pointer} button.rw:active{background:var(--raise)}
+.rw .g{flex:1;min-width:0;display:flex;flex-direction:column}
+.rw .g b{font-weight:600;overflow-wrap:anywhere} .rw .g span{color:var(--muted);font-size:13px}
+.rw .v{font-weight:600;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.rw .v small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.rw .p{width:26px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted);flex:none}
+.rw .ch{color:var(--muted);font-size:20px;flex:none} .rw .ck{color:var(--blue);font-weight:700;flex:none;width:18px}
+.rw.me{background:var(--raise)} .rw.me .p{color:var(--ink)}
+.sw{width:4px;height:30px;border-radius:2px;flex:none;background:var(--line)}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+.form input,.form select{font:inherit;font-size:17px;color:var(--ink);background:var(--raise);border:0;border-radius:10px;padding:10px 12px;width:100%}
+
+/* pieces */
+.strip{border:0;text-align:left;cursor:pointer;flex-direction:row;justify-content:space-between;align-items:center;padding:14px 18px}
+.strip .g{display:flex;flex-direction:column;min-width:0} .strip b{font-size:17px;overflow-wrap:anywhere}
+.ovr{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;text-align:right;font-variant-numeric:tabular-nums}
+.ovr small{display:block;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.04em;margin-top:2px}
+.ovr.xl{font-size:64px}
+.prog{height:6px;border-radius:3px;background:var(--raise);overflow:hidden} .prog i{display:block;height:100%;background:var(--blue);border-radius:3px}
+.chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.chipb{border:0;border-radius:12px;background:var(--raise);padding:10px 8px;font-size:15px;font-weight:600;cursor:pointer}
+.chipb.on{background:var(--blue);color:var(--on-blue)}
+.tags{display:flex;gap:6px;flex-wrap:wrap} .tag{background:var(--raise);border-radius:999px;padding:3px 10px;font-size:13px;font-weight:600}
+.resrow{display:flex;gap:16px;align-items:center} .resrow>div:last-child{min-width:0}
+.pos{font-size:56px;font-weight:800;letter-spacing:-.03em;line-height:1;flex:none}
+.stat{display:grid;grid-template-columns:86px 1fr 30px 40px;gap:10px;align-items:center;font-size:15px}
+.stat .bar{height:6px;border-radius:3px;background:var(--raise);overflow:hidden} .stat .bar i{display:block;height:100%;background:var(--ink);border-radius:3px}
+.stat .d{font-size:12px;color:var(--green);text-align:right;font-variant-numeric:tabular-nums}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+.tiles b{display:block;font-size:26px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums} .tiles span{font-size:12px;color:var(--muted)}
+.seg{display:flex;background:var(--raise);border-radius:10px;padding:2px}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:7px;font-size:14px;font-weight:600;cursor:pointer}
+.seg button.on{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.foot{font-size:12px;color:var(--muted);padding:8px 16px;text-align:center}
+
+/* tab bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--line);
+  padding:6px max(16px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px))}
+.tabbar div{max-width:540px;margin:0 auto;display:flex}
+.tabbar button{flex:1;border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:600;padding:4px;cursor:pointer;border-radius:10px}
+.tabbar button.on{color:var(--blue)}
+.tabbar svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media (prefers-reduced-motion:no-preference){.flash{animation:fl .3s ease-out}}
+@keyframes fl{from{transform:translateY(6px);opacity:.3}to{transform:none;opacity:1}}
 </style>
 </head>
 <body>
@@ -144,7 +140,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rname=()=>pick(FIRST)+' '+pick(LAST);
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
-let G=null, draft=null, confirmRetire=false, confirmNew=false;
+let G=null, draft=null, confirmRetire=false, confirmNew=false, tab='race', seg='champ';
 
 const ovrOf=s=>s.pace*.25+s.race*.25+s.ovt*.15+s.tyre*.15+s.wet*.1+s.mental*.1;
 const grade=p=>p>=94?'S':p>=88?'A':p>=82?'B':p>=76?'C':'D';
@@ -349,93 +345,95 @@ function save(){store.set(SAVE,G)}
 
 /* ---------- view ---------- */
 const app=document.getElementById('app');
-function header(){return `<div class="top"><div class="brand"><span class="lights"><i></i><i></i><i></i><i></i><i></i></span>포디움 로드<small>카트에서 월드 챔피언까지</small></div>
- ${G?`<span>${confirmNew?`<span class="small muted">지금 커리어를 지울까요?</span> <button class="linkbtn" data-a="newyes">지우고 새로 시작</button><button class="linkbtn" data-a="newno">취소</button>`:`<button class="linkbtn" data-a="new">새 커리어</button>`}</span>`:''}</div>`}
-function viewCreate(){
-  const d=draft;
-  return header()+`<div class="panel stack"><div><div class="eyebrow">DRIVER ENTRY</div><div class="big">열다섯 살, 카트 한 대.</div>
-  <p class="muted" style="max-width:62ch;margin-top:6px">카트 선수권에서 시작해 F4, F3, F2를 거쳐 F1 시트를 따내세요. 강팀 리저브로 벤치를 지킬지, 하위 팀에서 달릴지는 당신이 고릅니다. 월드 챔피언 횟수가 곧 기록입니다.</p></div>
-  <div class="row"><label class="f" for="in-name">드라이버 이름<input type="text" id="in-name" maxlength="16" value="${esc(d.name)}"></label>
-  <label class="f" for="in-nat">국적<select id="in-nat">${NATIONS.map(n=>`<option${n===d.nat?' selected':''}>${n}</option>`).join('')}</select></label></div>
-  <div><div class="small" style="font-weight:600;margin-bottom:6px">드라이빙 스타일</div><div class="opts">${STYLES.map(s=>`<button class="opt${d.style===s[0]?' on':''}" data-a="style" data-v="${s[0]}"><b>${s[1]}</b><span>${s[2]}</span></button>`).join('')}</div></div>
-  <div class="row" style="justify-content:space-between;border-top:1px solid var(--line);padding-top:12px">
-   <div class="row"><div><div class="eyebrow">POTENTIAL</div><div class="big">${grade(d.pot)} <span class="num" style="font-size:18px">${d.pot}</span></div></div>
-   <div class="small muted" style="max-width:34ch">성장 한계입니다. 높아도 벤치에만 앉아 있으면 자라지 않습니다.</div></div>
-   <div class="row"><button class="btn ghost" data-a="reroll"${d.rolls<=0?' disabled':''}>스카우트 재평가 (${d.rolls}회)</button><button class="btn" data-a="start">커리어 시작</button></div></div></div>`+hallPanel();
-}
+const FOOT='<p class="foot">비공식 팬메이드 게임입니다. F1, 각 팀, 드라이버와 아무 관련이 없으며, 게임 속 능력치·성적·이적은 모두 가상입니다.</p>';
+const head=(t,sub)=>`<header class="hd"><h1 class="lt">${t}</h1>${sub?`<p class="sub">${sub}</p>`:''}</header>`;
+const sw=c=>`<span class="sw"${c?` style="background:${c}"`:''}></span>`;
+const carRank=i=>G.teams.slice().sort((a,b)=>b.car-a.car).indexOf(G.teams[i])+1;
 function hallPanel(at){const hall=store.get(HALL)||[]; if(!hall.length)return '';
-  return `<div class="panel"><h2>명예의 전당 (이 기기)</h2><div class="tw"><table><tr><th>#</th><th>드라이버</th><th class="n">챔피언</th><th class="n">우승</th><th class="n">포디움</th><th class="n">출전</th></tr>
-  ${hall.map((h,i)=>`<tr class="${i===at?'me':''}"><td class="pos">${i+1}</td><td>${esc(h.name)} <span class="muted small">${esc(h.nat)}</span></td><td class="n">${h.titles}</td><td class="n">${h.wins}</td><td class="n">${h.pod}</td><td class="n">${h.races}</td></tr>`).join('')}</table></div></div>`}
-function driverCard(){
-  const s=G.stats,o=ovrOf(s),T=TIERS[G.tier];
-  const car=G.tier===GP?G.teams.slice().sort((a,b)=>b.car-a.car).indexOf(G.teams[G.team])+1:null;
-  return `<div class="panel stack"><div class="dhead"><div class="stack" style="gap:8px"><div><div class="eyebrow">${G.year} · ${G.age}세 · ${esc(G.nat)}</div><div class="dname">${esc(G.name)}</div></div>
-  <div class="chips"><span class="chip p">${T.short}</span><span class="chip">${esc(teamName())}</span>${G.tier===GP?`<span class="chip ${G.role==='race'?'g':'y'}">${G.role==='race'?'레이스 드라이버':'리저브'}</span><span class="chip">머신 ${car}위</span>`:`<span class="chip">${G.jr.bonus>0?'명문 팀':G.jr.bonus<0?'약체 팀':'중위권 팀'}</span>`}</div></div>
-  <div class="ovr">${Math.floor(o)}<span>OVR · 잠재 ${grade(G.pot)}</span></div></div>
-  <div class="stats">${STATS.map(([k,l])=>{const dv=G.deltas[k]||0;return `<div class="stat"><span>${l}${G.focus===k?' ●':''}</span><div class="bar"><i style="width:${s[k]}%"></i></div><span class="num">${Math.floor(s[k])}</span><span class="d">${dv>=.05?'+'+dv.toFixed(1):''}</span></div>`}).join('')}</div>
-  <div class="tot"><div class="champ"><b>${G.tot.titles}</b><span>월드 챔피언</span></div><div><b>${G.tot.wins}</b><span>우승</span></div><div><b>${G.tot.podiums}</b><span>포디움</span></div><div><b>${G.tot.poles}</b><span>폴 포지션</span></div></div></div>`}
-function historyPanel(){if(!G.history.length)return '';
-  return `<div class="panel"><h2>커리어 기록</h2><div class="tw"><table><tr><th>시즌</th><th>시리즈</th><th>팀</th><th class="n">순위</th><th class="n">승</th><th class="n">PTS</th></tr>
-  ${G.history.slice().reverse().map(h=>`<tr><td class="num">${h.year}</td><td>${h.series}${h.role==='reserve'?' <span class="muted">R</span>':''}</td><td>${esc(h.team)}</td><td class="n" style="${h.champ?'color:var(--purple);font-weight:700':''}">${h.pos?'P'+h.pos:'-'}</td><td class="n">${h.wins}</td><td class="n">${h.pts}</td></tr>`).join('')}</table></div></div>`}
-const sw=c=>c?`<span class="sw" style="background:${c}"></span>`:'';
-function standingsPanel(){
-  const st=standings(); if(!st.length)return '';
-  const me=st.findIndex(r=>r.key==='P'); let rows=st.slice(0,10).map((r,i)=>[r,i]);
-  if(me>=10)rows.push(null,[st[me],me]);
-  return `<div class="panel"><h2>드라이버 챔피언십</h2><div class="tw"><table><tr><th>#</th><th>드라이버</th><th>팀</th><th class="n">승</th><th class="n">PTS</th></tr>
-  ${rows.map(x=>x?`<tr class="${x[0].key==='P'?'me':''}"><td class="pos">${x[1]+1}</td><td>${sw(x[0].color)}${esc(x[0].name)}</td><td class="muted">${esc(x[0].team)}</td><td class="n">${x[0].wins}</td><td class="n">${x[0].pts}</td></tr>`:'<tr class="gap"><td colspan="5"></td></tr>').join('')}</table></div></div>`}
-function lastPanel(){const L=G.last; if(!L)return '';
-  const cls=L.dnf?'red':L.pos===1?'purple':L.pos<=3?'green':'';
-  return `<div class="panel stack flash"><div class="row" style="justify-content:space-between"><h2 style="margin:0">R${G.phase==='offseason'?TIERS[G.tier].rounds:G.round} ${L.gp} ${L.wet?'· 우천':''}</h2>${L.raced?`<span class="eyebrow">GRID P${L.grid}</span>`:''}</div>
-  ${L.ev?`<div class="note">${esc(L.ev)}</div>`:''}
-  <div class="res">${L.raced?`<div class="p ${cls}">${L.dnf?'DNF':'P'+L.pos}</div>`:`<div class="p" style="color:var(--muted)">대기</div>`}<div style="flex:1 1 220px;min-width:0"><p>${esc(L.text)}</p>${L.raced&&!L.dnf?`<p class="num small muted">+${L.pts} PTS</p>`:''}</div></div>
-  <div class="tw"><table><tr><th>#</th><th>드라이버</th><th>팀</th><th class="n">그리드</th><th class="n">PTS</th></tr>
-  ${L.cls.map((e,i)=>`${i===10?'<tr class="gap"><td colspan="5"></td></tr>':''}<tr class="${e.me?'me':''}"><td class="pos">${e.dnf?'DNF':e.pos}</td><td>${sw(e.color)}${esc(e.name)}</td><td class="muted">${esc(e.team)}</td><td class="n">${e.grid}</td><td class="n">${e.pts||''}</td></tr>`).join('')}</table></div></div>`}
-function actionPanel(){
+  return `<div class="gl">명예의 전당 (이 기기)</div><div class="list">${hall.map((h,i)=>`<div class="rw${i===at?' me':''}"><span class="p">${i+1}</span><div class="g"><b>${esc(h.name)}</b><span>${esc(h.nat)} · ${h.races}경기</span></div><span class="v">챔피언 ${h.titles}<small>${h.wins}승</small></span></div>`).join('')}</div>`}
+function viewCreate(){const d=draft;
+  return head('포디움 로드','열다섯 살, 카트 한 대. F1 월드 챔피언까지.')+
+  `<div class="card form"><label for="in-name">드라이버 이름<input type="text" id="in-name" maxlength="16" value="${esc(d.name)}"></label>
+   <label for="in-nat">국적<select id="in-nat">${NATIONS.map(n=>`<option${n===d.nat?' selected':''}>${n}</option>`).join('')}</select></label></div>
+  <div class="gl">드라이빙 스타일</div>
+  <div class="list">${STYLES.map(s=>`<button class="rw" data-a="style" data-v="${s[0]}"><div class="g"><b>${s[1]}</b><span>${s[2]}</span></div><span class="ck">${d.style===s[0]?'✓':''}</span></button>`).join('')}</div>
+  <div class="card between"><div><div class="cap">잠재력</div><div class="ttl">${grade(d.pot)} 등급 <span class="mut num" style="font-size:17px">${d.pot}</span></div></div><button class="pill" data-a="reroll"${d.rolls<=0?' disabled':''}>다시 평가 ${d.rolls}회</button></div>
+  <p class="hint">잠재력은 성장 한계입니다. 높아도 출전하지 못하면 자라지 않습니다.</p>
+  <button class="btn" data-a="start">커리어 시작</button>`+hallPanel()+FOOT}
+
+function phaseBlocks(){
   const T=TIERS[G.tier];
-  const prog=`<div class="prog">${Array.from({length:T.rounds},(_,i)=>`<i class="${i<G.round?'done':''}"></i>`).join('')}</div>`;
   if(G.phase==='preseason'){
-    return `<div class="panel stack"><div><div class="eyebrow">${G.year} 프리시즌 · ${T.name}</div><div class="mid">${esc(teamName())}에서 ${G.tier===GP&&G.role==='reserve'?'리저브 드라이버로 대기합니다.':'시즌을 시작합니다.'}</div>
-    ${G.regNews&&G.tier===GP?'<div class="note" style="margin-top:8px">F1 기술 규정이 바뀌었습니다. 팀 간 머신 서열이 크게 흔들립니다.</div>':''}
-    ${G.tier===GP&&G.role==='reserve'?'<p class="small muted" style="margin-top:6px">리저브는 주전이 결장할 때만 출전합니다. 성장 속도는 주전의 3분의 1 수준입니다. 시즌 중반에 주전보다 기량이 앞서면 시트를 넘겨받을 수 있습니다.</p>':''}</div>
-    <div><div class="small" style="font-weight:600;margin-bottom:6px">이번 시즌 훈련 중점</div><div class="opts" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">${STATS.map(([k,l])=>`<button class="opt${G.focus===k?' on':''}" data-a="focus" data-v="${k}"><b>${l}</b><span class="tag">현재 ${Math.floor(G.stats[k])}</span></button>`).join('')}<button class="opt${!G.focus?' on':''}" data-a="focus" data-v=""><b>균형 훈련</b><span class="tag">고르게 성장</span></button></div></div>
-    <div class="row"><button class="btn" data-a="go">개막전으로</button></div></div>`}
+    return `<div class="card"><div><div class="cap">프리시즌</div><div class="ttl">이번 시즌 훈련 중점</div></div>
+    ${G.regNews&&G.tier===GP?'<div class="note">기술 규정이 바뀌어 팀 간 머신 서열이 크게 흔들립니다.</div>':''}
+    ${G.tier===GP&&G.role==='reserve'?'<div class="note">리저브는 주전이 결장할 때만 출전하고 성장도 느립니다. 시즌 중반에 주전보다 기량이 앞서면 시트를 넘겨받습니다.</div>':''}
+    <div class="chips">${STATS.map(([k,l])=>`<button class="chipb${G.focus===k?' on':''}" data-a="focus" data-v="${k}">${l}</button>`).join('')}<button class="chipb${!G.focus?' on':''}" data-a="focus" data-v="">균형</button></div>
+    <button class="btn" data-a="go">개막전으로</button></div>`}
   if(G.phase==='season'){
-    return `<div class="panel stack"><div class="row" style="justify-content:space-between"><div><div class="eyebrow">${G.year} ${T.name} · ROUND ${G.round+1}/${T.rounds}</div><div class="mid">다음 레이스: ${CIRCUITS[G.round]}</div></div>
-    <div class="row"><button class="btn" data-a="next">레이스 시작</button><button class="btn ghost" data-a="auto">시즌 끝까지 진행</button></div></div>${prog}
-    ${G.promoNote?`<div class="note">${esc(G.promoNote)}</div>`:''}</div>`}
+    return `<div class="card"><div><div class="cap">ROUND ${G.round+1} / ${T.rounds}</div><div class="ttl">${CIRCUITS[G.round]} 그랑프리</div></div>
+    <div class="prog"><i style="width:${G.round/T.rounds*100}%"></i></div>
+    ${G.promoNote?`<div class="note">${esc(G.promoNote)}</div>`:''}
+    <button class="btn" data-a="next">레이스 시작</button><button class="tbtn" data-a="auto">시즌 끝까지 진행</button></div>`}
   if(G.phase==='event'){const ev=EVENTS[G.event.e];
-    return `<div class="panel stack flash"><div><div class="eyebrow">R${G.round+1} ${CIRCUITS[G.round]} · 결정의 순간</div><div class="mid">${ev.t}</div><p class="muted">${ev.d}</p></div>
-    <div class="opts">${ev.o.map((o,i)=>`<button class="opt" data-a="ev" data-v="${i}"><b>${o.l}</b><span>${o.s}</span>${o.k?`<span class="tag">${STATS.find(s=>s[0]===o.k)[1]} ${Math.floor(G.stats[o.k])}</span>`:''}</button>`).join('')}</div></div>`}
-  if(G.phase==='offseason'){const e=G.seasonEnd, age=G.age+1;
-    const head=e.champ?(G.tier===GP?'월드 챔피언!':T.name+' 챔피언!'):e.pos?`시즌 ${e.pos}위`:'출전 없이 시즌 종료';
-    const sub=e.champ?(G.tier===GP?'세계에서 가장 빠른 드라이버가 되었습니다.':'시리즈 정상에 올랐습니다. 상위 팀들이 지켜보고 있습니다.'):`챔피언은 ${esc(e.winner||'-')}.`;
+    return `<div class="card flash"><div><div class="cap">${CIRCUITS[G.round]} · 결정의 순간</div><div class="ttl">${ev.t}</div></div><p>${ev.d}</p></div>
+    <div class="list">${ev.o.map((o,i)=>`<button class="rw" data-a="ev" data-v="${i}"><div class="g"><b>${o.l}</b><span>${o.s}${o.k?` (${STATS.find(s=>s[0]===o.k)[1]} ${Math.floor(G.stats[o.k])})`:''}</span></div><span class="ch">›</span></button>`).join('')}</div>`}
+  if(G.phase==='offseason'){const e=G.seasonEnd;
+    const hd=e.champ?(G.tier===GP?'월드 챔피언':T.short+' 챔피언'):e.pos?`시즌 ${e.pos}위`:'출전 없이 시즌 종료';
     const offers=G.offers.map((o,i)=>{
-      if(o.type==='jr'){const t=TIERS[o.tier];return `<button class="opt" data-a="offer" data-v="${i}"><span class="tag">${o.stay?'잔류':o.back?'한 단계 내려가기':'승격'} · ${t.short}</span><b>${esc(o.name)}</b><span>${t.name} · ${o.bonus>0?'명문 팀, 좋은 머신':o.bonus<0?'약체 팀, 느린 머신':'중위권 팀'}</span></button>`}
-      const t=G.teams[o.team], rank=G.teams.slice().sort((a,b)=>b.car-a.car).indexOf(t)+1, td=teamDrivers(o.team);
-      return `<button class="opt" data-a="offer" data-v="${i}"><span class="tag">${o.stay?'재계약':'F1 제안'} · 머신 ${rank}위</span><b>${sw(t.color)}${esc(t.name)}</b><span>${o.role==='race'?'레이스 시트':'리저브 드라이버'} · 팀메이트 ${td.slice(0,o.role==='race'&&!o.stay?1:2).map(d=>esc(d.name)+' '+Math.round(d.ovr)).join(', ')}</span></button>`}).join('');
-    return `<div class="panel stack flash"><div><div class="eyebrow">${G.year} 시즌 종료 · ${T.name}</div><div class="big" style="${e.champ?'color:var(--purple)':''}">${head}</div><p class="muted">${sub} ${e.pts} PTS · ${G.ss.wins}승 · 포디움 ${G.ss.podiums}회${e.mate?` · 팀메이트 ${esc(e.mate.name)} ${e.mate.pts} PTS`:''}</p></div>
+      if(o.type==='jr'){const t=TIERS[o.tier];return `<button class="rw" data-a="offer" data-v="${i}">${sw()}<div class="g"><b>${esc(o.name)}</b><span>${t.short} ${o.stay?'잔류':o.back?'복귀':'승격'} · ${o.bonus>0?'명문 팀':o.bonus<0?'약체 팀':'중위권 팀'}</span></div><span class="ch">›</span></button>`}
+      const t=G.teams[o.team];
+      return `<button class="rw" data-a="offer" data-v="${i}">${sw(t.color)}<div class="g"><b>${esc(t.name)}</b><span>${o.stay?'재계약 · ':''}${o.role==='race'?'레이스 시트':'리저브'} · 머신 ${carRank(o.team)}위</span></div><span class="ch">›</span></button>`}).join('');
+    return `<div class="card flash"><div><div class="cap">${G.year} 시즌 종료</div><div class="ttl${e.champ?' purple':''}">${hd}</div></div>
+    <p class="sub num">${e.pts} PTS · ${G.ss.wins}승 · 포디움 ${G.ss.podiums}회${e.champ?'':` · 챔피언 ${esc(e.winner||'-')}`}</p>
     ${e.dropped?'<div class="note">팀이 재계약을 포기했습니다. 팀메이트와의 격차가 너무 컸습니다.</div>':''}
-    ${G.offers.length?`<div><div class="small" style="font-weight:600;margin-bottom:6px">${G.year+1} 시즌 제안 (${age}세)</div><div class="opts">${offers}</div></div>`:`<div class="note">${G.tier<GP?'후원사가 더는 기다려 주지 않습니다. 주니어 포뮬러에 남을 자금이 없습니다.':'어느 팀도 시트를 제안하지 않았습니다.'}</div>`}
-    <div class="row">${confirmRetire?`<span class="small">정말 은퇴할까요? 되돌릴 수 없습니다.</span><button class="btn danger" data-a="retireyes">은퇴한다</button><button class="btn ghost" data-a="retireno">계속 달린다</button>`:`<button class="btn ${G.offers.length?'ghost':''}" data-a="retire">헬멧을 벗는다 (은퇴)</button>`}</div></div>`}
+    ${G.offers.length?'':`<div class="note">${G.tier<GP?'후원사가 떠났습니다. 주니어 포뮬러에 남을 자금이 없습니다.':'어느 팀도 시트를 제안하지 않았습니다.'}</div>`}</div>
+    ${G.offers.length?`<div class="gl">${G.year+1} 시즌 제안</div><div class="list">${offers}</div>`:''}
+    ${confirmRetire?`<div class="card"><p>정말 은퇴할까요? 되돌릴 수 없습니다.</p><button class="btn" data-a="retireno">계속 달린다</button><button class="tbtn red" data-a="retireyes">은퇴한다</button></div>`:`<button class="tbtn red" data-a="retire">은퇴하기</button>`}`}
   if(G.phase==='retired'){const [t,d]=legacy();
-    return `<div class="panel stack"><div><div class="eyebrow">CAREER COMPLETE · ${G.history.length}시즌 · ${G.age}세 은퇴</div><div class="big">${t}</div><p class="muted">${esc(G.name)}. ${d}</p></div>
-    <div class="tot"><div class="champ"><b>${G.tot.titles}</b><span>월드 챔피언</span></div><div><b>${G.tot.wins}</b><span>우승</span></div><div><b>${G.tot.podiums}</b><span>포디움</span></div><div><b>${G.tot.races}</b><span>출전</span></div></div>
-    <div class="row"><button class="btn" data-a="newyes">새 커리어 시작</button></div></div>`+hallPanel(G.hallAt)}
+    return `<div class="card"><div><div class="cap">${G.history.length}시즌 · ${G.age}세 은퇴</div><div class="ttl">${t}</div></div><p class="sub">${d}</p>
+    <div class="tiles"><div><b class="purple">${G.tot.titles}</b><span>챔피언</span></div><div><b>${G.tot.wins}</b><span>우승</span></div><div><b>${G.tot.podiums}</b><span>포디움</span></div><div><b>${G.tot.races}</b><span>출전</span></div></div>
+    <button class="btn" data-a="newyes">새 커리어 시작</button></div>`+hallPanel(G.hallAt)}
   return '';
 }
-const FOOT='<p class="foot">비공식 팬메이드 게임입니다. F1, 각 팀, 드라이버와 아무 관련이 없으며, 게임 속 능력치·성적·이적은 모두 가상이고 실제 평가나 예측이 아닙니다.</p>';
+function lastCard(){const L=G.last; if(!L||(G.phase!=='season'&&G.phase!=='offseason'))return '';
+  const c=L.dnf?'red':L.pos===1?'purple':L.pos<=3?'green':'';
+  return `<div class="card flash"><div class="cap">${L.gp} 그랑프리 결과${L.wet?' · 우천':''}</div>
+  <div class="resrow"><div class="pos ${L.raced?c:'mut'}">${L.raced?(L.dnf?'DNF':'P'+L.pos):'대기'}</div><div><p>${esc(L.text)}</p>${L.raced?`<p class="sub num">그리드 P${L.grid}${L.dnf?'':` · +${L.pts} PTS`}</p>`:''}</div></div>
+  ${L.ev?`<div class="note">${esc(L.ev)}</div>`:''}</div>`}
+function raceTab(){const T=TIERS[G.tier];
+  return head(`${G.year} 시즌`,`${T.name} · ${esc(teamName())}${G.tier===GP&&G.role==='reserve'?' · 리저브':''}`)+
+  `<button class="card strip" data-a="tab" data-v="me"><div class="g"><b>${esc(G.name)}</b><span class="sub">${G.age}세 · 잠재력 ${grade(G.pot)}</span></div><div class="ovr">${Math.floor(ovrOf(G.stats))}<small>OVR</small></div></button>`+
+  phaseBlocks()+lastCard()}
+function tableTab(){
+  const st=standings(), L=G.last, T=TIERS[G.tier];
+  let body='';
+  if(!st.length)body='<div class="card"><p class="sub">아직 치른 레이스가 없습니다.</p></div>';
+  else if(seg==='race'&&L){
+    body=`<div class="gl">${L.gp} 그랑프리${L.wet?' · 우천':''}</div><div class="list">${L.cls.map(e=>`<div class="rw${e.me?' me':''}"><span class="p">${e.dnf?'–':e.pos}</span>${sw(e.color)}<div class="g"><b>${esc(e.name)}</b><span>${esc(e.team)}</span></div><span class="v">${e.dnf?'DNF':e.pts?'+'+e.pts:''}<small>그리드 ${e.grid}</small></span></div>`).join('')}</div>`}
+  else{const me=st.findIndex(r=>r.key==='P'); const rows=st.slice(0,10).map((r,i)=>[r,i]); if(me>=10)rows.push([st[me],me]);
+    body=`<div class="list">${rows.map(([r,i])=>`<div class="rw${r.key==='P'?' me':''}"><span class="p">${i+1}</span>${sw(r.color)}<div class="g"><b>${esc(r.name)}</b><span>${esc(r.team)}</span></div><span class="v">${r.pts}<small>${r.wins}승</small></span></div>`).join('')}</div>`}
+  return head('순위',`${G.year} ${T.name}`)+`<div class="seg"><button class="${seg!=='race'?'on':''}" data-a="seg" data-v="champ">챔피언십</button><button class="${seg==='race'?'on':''}" data-a="seg" data-v="race">지난 레이스</button></div>`+body}
+function meTab(){const s=G.stats,T=TIERS[G.tier];
+  return head(esc(G.name),`${G.age}세 · ${esc(G.nat)}`)+
+  `<div class="card"><div class="between"><div class="tags"><span class="tag">${T.short}</span><span class="tag">${esc(teamName())}</span>${G.tier===GP?`<span class="tag">${G.role==='race'?'레이스 드라이버':'리저브'}</span><span class="tag">머신 ${carRank(G.team)}위</span>`:''}<span class="tag">잠재력 ${grade(G.pot)}</span></div><div class="ovr xl">${Math.floor(ovrOf(s))}<small>OVR</small></div></div></div>
+  <div class="card">${STATS.map(([k,l])=>{const dv=G.deltas[k]||0;return `<div class="stat"><span>${l}</span><div class="bar"><i style="width:${s[k]}%"></i></div><b class="num">${Math.floor(s[k])}</b><span class="d">${dv>=.05?'+'+dv.toFixed(1):''}</span></div>`}).join('')}</div>
+  <div class="card"><div class="tiles"><div><b class="purple">${G.tot.titles}</b><span>챔피언</span></div><div><b>${G.tot.wins}</b><span>우승</span></div><div><b>${G.tot.podiums}</b><span>포디움</span></div><div><b>${G.tot.poles}</b><span>폴</span></div></div></div>
+  ${G.history.length?`<div class="gl">커리어 기록</div><div class="list">${G.history.slice().reverse().map(h=>`<div class="rw"><div class="g"><b>${h.year} ${h.series}${h.role==='reserve'?' 리저브':''}</b><span>${esc(h.team)}</span></div><span class="v${h.champ?' purple':''}">${h.pos?'P'+h.pos:'–'}<small>${h.pts} PTS · ${h.wins}승</small></span></div>`).join('')}</div>`:''}
+  ${confirmNew?`<div class="card"><p>지금 커리어를 지우고 새로 시작할까요?</p><button class="btn" data-a="newno">취소</button><button class="tbtn red" data-a="newyes">지우고 새로 시작</button></div>`:`<button class="tbtn red" data-a="new">새 커리어 시작</button>`}`+FOOT}
+const ICON={race:'<path d="M6 21V4"/><path d="M6 5c4-2 6 2 12 0v9c-6 2-8-2-12 0"/>',table:'<path d="M9 7h11M9 12h11M9 17h11"/><path d="M4.5 7h.01M4.5 12h.01M4.5 17h.01"/>',me:'<circle cx="12" cy="8.5" r="3.6"/><path d="M5 20c.8-3.8 3.6-5.6 7-5.6s6.2 1.8 7 5.6"/>'};
+function tabbar(){return `<nav class="tabbar"><div>${[['race','레이스'],['table','순위'],['me','드라이버']].map(([k,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k?'on':''}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg><span>${l}</span></button>`).join('')}</div></nav>`}
 function render(){
-  if(!G){app.innerHTML=viewCreate()+FOOT;return}
-  const right=actionPanel()+(G.phase==='retired'?'':lastPanel()+standingsPanel());
-  app.innerHTML=header()+`<div class="grid"><div class="col">${driverCard()}${historyPanel()}</div><div class="col">${right}</div></div>`+FOOT;
+  if(!G){app.innerHTML=viewCreate();return}
+  app.innerHTML=(tab==='table'?tableTab():tab==='me'?meTab():raceTab())+tabbar();
 }
 function newDraft(){draft={name:'한서준',nat:'대한민국',style:'pace',pot:rollPot(),rolls:3}}
 function syncDraft(){const n=document.getElementById('in-name'),s=document.getElementById('in-nat');if(n)draft.name=n.value;if(s)draft.nat=s.value}
 app.addEventListener('click',ev=>{
   const b=ev.target.closest('[data-a]'); if(!b)return; const a=b.dataset.a,v=b.dataset.v;
   if(!G)syncDraft();
-  if(a==='style'){draft.style=v}
+  if(a==='tab'){tab=v;confirmNew=false;window.scrollTo(0,0)}
+  else if(a==='seg'){seg=v}
+  else if(a==='style'){draft.style=v}
   else if(a==='reroll'){if(draft.rolls>0){draft.rolls--;draft.pot=rollPot()}}
   else if(a==='start'){startCareer();return}
   else if(a==='focus'){G.focus=v||null}
@@ -449,7 +447,7 @@ app.addEventListener('click',ev=>{
   else if(a==='retireyes'){retire();return}
   else if(a==='new'){confirmNew=true}
   else if(a==='newno'){confirmNew=false}
-  else if(a==='newyes'){confirmNew=false;G=null;store.del(SAVE);newDraft()}
+  else if(a==='newyes'){confirmNew=false;tab='race';G=null;store.del(SAVE);newDraft()}
   render();
 });
 function start(data){
