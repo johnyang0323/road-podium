@@ -95,6 +95,17 @@ button.rw{cursor:pointer} button.rw:active{background:var(--raise)}
 .hudw{display:flex;flex-direction:column;gap:14px}
 .tyre{display:grid;grid-template-columns:auto 1fr 38px;gap:10px;align-items:center} .tyre .cap:last-child{text-align:right}
 .ctrl{display:flex;gap:8px;flex-wrap:wrap;justify-content:center} .ctrl .pill{flex:1 1 140px;padding:11px 14px}
+.px{image-rendering:pixelated;flex:none}
+.wz{display:flex;align-items:center;gap:12px;padding:6px 4px 0} .wz .prog{flex:1}
+.back{border:0;background:none;font-size:34px;line-height:.8;color:var(--blue);cursor:pointer;padding:0 8px 6px 0}
+.hgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.hb{border:2px solid transparent;border-radius:14px;background:var(--raise);padding:14px 0;display:flex;justify-content:center;cursor:pointer}
+.hb.on{border-color:var(--blue);background:var(--surface)}
+.cand{border:2px solid transparent;text-align:left;cursor:pointer;width:100%} .cand.on{border-color:var(--blue)}
+.ladder{display:flex;align-items:center;gap:6px;width:100%;max-width:340px}
+.ladder span{font-size:12px;font-weight:700;color:var(--muted);background:var(--raise);border-radius:999px;padding:3px 9px}
+.ladder span.on{background:var(--blue);color:var(--on-blue)} .ladder i{flex:1;height:2px;background:var(--line)}
+.btn:disabled{opacity:.4;cursor:default} .tbtn:disabled{color:var(--muted);cursor:default}
 /* tab bar */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--line);
   padding:6px max(16px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px))}
@@ -180,9 +191,9 @@ function evolveWorld(){
 
 /* ---------- career ---------- */
 function startCareer(){
-  const s={};STATS.forEach(([k])=>s[k]=ri(29,40)); s[draft.style]+=7;
-  G={v:2,nid:1,name:draft.name.trim()||'이름 없는 드라이버',nat:draft.nat,style:draft.style,age:15,year:2026,pot:draft.pot,stats:s,
-     tier:0,role:'race',jr:{name:pick(JR_TEAMS),bonus:0},team:null,focus:null,phase:'preseason',
+  const cd=draft.cands[draft.sel], s={...cd.stats};
+  G={v:2,nid:1,name:draft.name.trim()||'이름 없는 드라이버',nat:draft.nat,num:draft.num,helmet:draft.helmet,style:cd.style,age:15,year:2026,pot:cd.pot,stats:s,
+     tier:0,role:'race',jr:{name:pick(JR_TEAMS),bonus:0},team:null,focus:draft.focus.slice(),phase:'preseason',
      tot:{titles:0,wins:0,podiums:0,poles:0,races:0,points:0,jr:0},history:[],last:null,deltas:{}};
   newWorld(); startSeason(); save(); render();
 }
@@ -199,7 +210,7 @@ function teamName(){return G.tier<GP?G.jr.name:G.teams[G.team].name}
 function growth(mult){
   const o=ovrOf(G.stats), a=G.age, af=a<=19?1.25:a<=23?1:a<=27?.6:a<=30?.3:.05;
   const base=Math.max(0,G.pot-o)*.03*af*mult; const keys=STATS.map(s=>s[0]); const d={};
-  for(let i=0;i<3;i++){const k=(G.focus&&R()<.5)?G.focus:pick(keys); const before=G.stats[k];
+  for(let i=0;i<3;i++){const k=(G.focus.length&&R()<.55)?pick(G.focus):pick(keys); const before=G.stats[k];
     G.stats[k]=Math.min(99,G.pot+4,Math.max(before,before+base*2*(.6+R()*.8))); d[k]=(d[k]||0)+G.stats[k]-before}
   Object.keys(d).forEach(k=>G.deltas[k]=(G.deltas[k]||0)+d[k]);
 }
@@ -505,23 +516,53 @@ const sw=c=>`<span class="sw"${c?` style="background:${c}"`:''}></span>`;
 const carRank=i=>G.teams.slice().sort((a,b)=>b.car-a.car).indexOf(G.teams[i])+1;
 function hallPanel(at){const hall=store.get(HALL)||[]; if(!hall.length)return '';
   return `<div class="gl">명예의 전당 (이 기기)</div><div class="list">${hall.map((h,i)=>`<div class="rw${i===at?' me':''}"><span class="p">${i+1}</span><div class="g"><b>${esc(h.name)}</b><span>${esc(h.nat)} · ${h.races}경기</span></div><span class="v">챔피언 ${h.titles}<small>${h.wins}승</small></span></div>`).join('')}</div>`}
+const HELMS=[['#e0282d','#ffffff'],['#0071e3','#ffe14a'],['#ffffff','#e0282d'],['#ffd21f','#16161a'],['#2b2b33','#27c8b4'],['#f58020','#0b2a5b'],['#27c8b4','#16161a'],['#e868b3','#ffffff'],['#1f8a3b','#ffd21f'],['#8944ab','#ffffff'],['#0b2a5b','#e0282d'],['#c9ccd4','#0071e3']];
+const HMAP=['....kkkkkkk.....','..kkaaaaaaakk...','.kaaaabbaaaaak..','.kaaaabbaaaaaak.','kaaaaabbaaaaaak.','kaaaaabbkkkkkkk.','kaaaaabkvvvvwvk.','kaaaaabkvvvvvvk.','kaaaaabbkkkkkkk.','kaaaaabbaaaaaak.','kaaaaabbaaaaak..','.kaaaabbaaaakk..','.kkaaabbaaakk...','...kkkkkkkkk....'];
+const hcache={};
+function helm(i){ if(hcache[i])return hcache[i]; const c=document.createElement('canvas');c.width=16;c.height=14;const x=c.getContext('2d'),col={k:'#16161a',a:HELMS[i][0],b:HELMS[i][1],v:'#3b4a66',w:'#cfe3ff'};
+  HMAP.forEach((r,y)=>[...r].forEach((ch,xx)=>{if(col[ch]){x.fillStyle=col[ch];x.fillRect(xx,y,1,1)}})); return hcache[i]=c.toDataURL()}
+const himg=(i,sz)=>`<img class="px" src="${helm(i%HELMS.length)}" width="${sz}" height="${Math.round(sz*14/16)}" alt="">`;
+const KNAMES=['한서준','김도윤','이하준','박시우','정우진','최건우','강민혁','윤태오','서지호','문현우'];
+function mkCands(){const keys=STATS.map(x=>x[0]);
+  return STYLES.slice().sort(()=>R()-.5).slice(0,3).map(st=>{const v={};keys.forEach(k=>v[k]=29+ri(0,11));v[st[0]]+=8;
+    let d=222-keys.reduce((a,k)=>a+v[k],0);while(d!==0){const k=pick(keys);if(d>0&&v[k]<50){v[k]++;d--}else if(d<0&&v[k]>26&&k!==st[0]){v[k]--;d++}}
+    return {style:st[0],name:st[1],desc:st[2].split('. ')[0]+'.',stats:v,pot:rollPot()}})}
+const wz=n=>`<div class="wz"><button class="back" data-a="cback" aria-label="뒤로">‹</button><div class="prog"><i style="width:${n*25}%"></i></div><span class="cap num">${n} / 4</span></div>`;
+const lead=(t,sub)=>`<header class="hd" style="padding-top:4px"><h1 class="ttl" style="font-size:28px">${t}</h1><p class="sub">${sub}</p></header>`;
 function viewCreate(){const d=draft;
-  return head('포디움 로드','열다섯 살, 카트 한 대. F1 월드 챔피언까지.')+
-  `<div class="card form"><label for="in-name">드라이버 이름<input type="text" id="in-name" maxlength="16" value="${esc(d.name)}"></label>
-   <label for="in-nat">국적<select id="in-nat">${NATIONS.map(n=>`<option${n===d.nat?' selected':''}>${n}</option>`).join('')}</select></label></div>
-  <div class="gl">드라이빙 스타일</div>
-  <div class="list">${STYLES.map(s=>`<button class="rw" data-a="style" data-v="${s[0]}"><div class="g"><b>${s[1]}</b><span>${s[2]}</span></div><span class="ck">${d.style===s[0]?'✓':''}</span></button>`).join('')}</div>
-  <div class="card between"><div><div class="cap">잠재력</div><div class="ttl">${grade(d.pot)} 등급 <span class="mut num" style="font-size:17px">${d.pot}</span></div></div><button class="pill" data-a="reroll"${d.rolls<=0?' disabled':''}>다시 평가 ${d.rolls}회</button></div>
-  <p class="hint">잠재력은 성장 한계입니다. 높아도 출전하지 못하면 자라지 않습니다.</p>
-  <button class="btn" data-a="start">커리어 시작</button>`+hallPanel()+FOOT}
+  if(d.step===0)return head('포디움 로드','열다섯 살, 카트 한 대에서 시작합니다.')+
+    `<div class="card" style="align-items:center;text-align:center;padding-block:28px">${himg(d.helmet,112)}<p style="max-width:30ch">레이스마다 내리는 선택이 쌓여 커리어가 됩니다. F1 시트, 그리고 월드 챔피언까지.</p>
+     <div class="ladder">${['카트','F4','F3','F2','F1'].map((l,i)=>`<span class="${i?'':'on'}">${l}</span>`).join('<i></i>')}</div></div>`+hallPanel()+
+    `<button class="btn" data-a="cnext">새 커리어 시작</button>`+FOOT;
+  if(d.step===1)return wz(1)+lead('헬멧을 골라 주세요','커리어 내내 당신을 알아보게 해 줄 디자인입니다.')+
+    `<div class="card"><div class="between" style="justify-content:flex-start">${himg(d.helmet,80)}<b>내 헬멧</b></div>
+     <div class="hgrid">${HELMS.map((h,i)=>`<button class="hb${d.helmet===i?' on':''}" data-a="helm" data-v="${i}" aria-label="헬멧 ${i+1}">${himg(i,44)}</button>`).join('')}</div></div>
+    <button class="btn" data-a="cnext">이 헬멧으로</button>`;
+  if(d.step===2)return wz(2)+lead('어떤 드라이버인가요?','이름과 번호는 커리어 내내 따라다닙니다.')+
+    `<div class="card form"><label for="in-name">이름<input type="text" id="in-name" maxlength="16" placeholder="드라이버 이름" value="${esc(d.name)}"></label>
+     <div class="between" style="align-items:flex-end"><label for="in-num" style="flex:0 0 96px">레이스 번호<input type="number" id="in-num" min="2" max="99" inputmode="numeric" value="${d.num}"></label>
+     <label for="in-nat" style="flex:1">국적<select id="in-nat">${NATIONS.map(n=>`<option${n===d.nat?' selected':''}>${n}</option>`).join('')}</select></label></div></div>
+    <button class="tbtn" data-a="rand">랜덤으로 채우기</button>
+    <button class="btn" id="next-btn" data-a="cnext"${d.name.trim()?'':' disabled'}>다음</button>`;
+  if(d.step===3)return wz(3)+lead('드라이빙 스타일을 골라 주세요','세 후보는 능력치 합이 같고, 분포와 잠재력이 다릅니다.')+
+    d.cands.map((c,i)=>{const top=STATS.slice().sort((a,b)=>c.stats[b[0]]-c.stats[a[0]]).slice(0,2);
+      return `<button class="card cand${d.sel===i?' on':''}" data-a="cand" data-v="${i}"><div class="between"><div><b style="font-size:18px">${c.name}</b><div class="sub">${c.desc}</div></div><span class="ck">${d.sel===i?'✓':''}</span></div>
+      <div class="tags">${top.map(t=>`<span class="tag">${t[1]} ${c.stats[t[0]]}</span>`).join('')}<span class="tag">잠재력 ${grade(c.pot)}</span></div>
+      ${d.sel===i?STATS.map(([k,l])=>`<div class="stat" style="grid-template-columns:86px 1fr 30px"><span>${l}</span><div class="bar"><i style="width:${c.stats[k]}%;background:var(--blue)"></i></div><b class="num">${c.stats[k]}</b></div>`).join(''):''}</button>`}).join('')+
+    `<button class="tbtn" data-a="recand"${d.rolls<=0?' disabled':''}>다른 후보 보기 (${d.rolls}회 남음)</button><button class="btn" data-a="cnext">이 스타일로</button>`;
+  const c=d.cands[d.sel];
+  return wz(4)+lead('집중해서 키울 능력치','최대 2개. 고른 능력치가 더 빨리 자라고, 프리시즌마다 바꿀 수 있습니다.')+
+    `<div class="list">${STATS.map(([k,l])=>`<button class="rw" data-a="fstat" data-v="${k}"><div class="g"><b>${l}</b></div><span class="v mut">${c.stats[k]}</span><span class="ck">${d.focus.includes(k)?'✓':''}</span></button>`).join('')}</div>
+    <button class="btn" data-a="start"${d.focus.length?'':' disabled'}>커리어 시작</button>`;
+}
 
 function phaseBlocks(){
   const T=TIERS[G.tier];
   if(G.phase==='preseason'){
-    return `<div class="card"><div><div class="cap">프리시즌</div><div class="ttl">이번 시즌 훈련 중점</div></div>
+    return `<div class="card"><div><div class="cap">프리시즌</div><div class="ttl">집중해서 키울 능력치</div></div>
     ${G.regNews&&G.tier===GP?'<div class="note">기술 규정이 바뀌어 팀 간 머신 서열이 크게 흔들립니다.</div>':''}
     ${G.tier===GP&&G.role==='reserve'?'<div class="note">리저브는 주전이 결장할 때만 출전하고 성장도 느립니다. 시즌 중반에 주전보다 기량이 앞서면 시트를 넘겨받습니다.</div>':''}
-    <div class="chips">${STATS.map(([k,l])=>`<button class="chipb${G.focus===k?' on':''}" data-a="focus" data-v="${k}">${l}</button>`).join('')}<button class="chipb${!G.focus?' on':''}" data-a="focus" data-v="">균형</button></div>
+    <div class="chips">${STATS.map(([k,l])=>`<button class="chipb${G.focus.includes(k)?' on':''}" data-a="focus" data-v="${k}">${l}</button>`).join('')}</div><p class="sub" style="font-size:13px">최대 2개. 고르지 않으면 고르게 성장합니다.</p>
     <button class="btn" data-a="go">개막전으로</button></div>`}
   if(G.phase==='season'){
     return `<div class="card"><div><div class="cap">ROUND ${G.round+1} / ${T.rounds}</div><div class="ttl">${CIRCUITS[G.round]} 그랑프리</div></div>
@@ -556,7 +597,7 @@ function lastCard(){const L=G.last; if(!L||(G.phase!=='season'&&G.phase!=='offse
   ${L.ev?`<div class="note">${esc(L.ev)}</div>`:''}</div>`}
 function raceTab(){const T=TIERS[G.tier];
   return head(`${G.year} 시즌`,`${T.name} · ${esc(teamName())}${G.tier===GP&&G.role==='reserve'?' · 리저브':''}`)+
-  `<button class="card strip" data-a="tab" data-v="me"><div class="g"><b>${esc(G.name)}</b><span class="sub">${G.age}세 · 잠재력 ${grade(G.pot)}</span></div><div class="ovr">${Math.floor(ovrOf(G.stats))}<small>OVR</small></div></button>`+
+  `<button class="card strip" data-a="tab" data-v="me">${himg(G.helmet||0,40)}<div class="g" style="flex:1"><b>${esc(G.name)}</b><span class="sub">${G.age}세 · 잠재력 ${grade(G.pot)}</span></div><div class="ovr">${Math.floor(ovrOf(G.stats))}<small>OVR</small></div></button>`+
   phaseBlocks()+lastCard()}
 function tableTab(){
   const st=standings(), L=G.last, T=TIERS[G.tier];
@@ -568,7 +609,7 @@ function tableTab(){
     body=`<div class="list">${rows.map(([r,i])=>`<div class="rw${r.key==='P'?' me':''}"><span class="p">${i+1}</span>${sw(r.color)}<div class="g"><b>${esc(r.name)}</b><span>${esc(r.team)}</span></div><span class="v">${r.pts}<small>${r.wins}승</small></span></div>`).join('')}</div>`}
   return head('순위',`${G.year} ${T.name}`)+`<div class="seg"><button class="${seg!=='race'?'on':''}" data-a="seg" data-v="champ">챔피언십</button><button class="${seg==='race'?'on':''}" data-a="seg" data-v="race">지난 레이스</button></div>`+body}
 function meTab(){const s=G.stats,T=TIERS[G.tier];
-  return head(esc(G.name),`${G.age}세 · ${esc(G.nat)}`)+
+  return head(esc(G.name),`#${G.num||1} · ${G.age}세 · ${esc(G.nat)}`)+
   `<div class="card"><div class="between"><div class="tags"><span class="tag">${T.short}</span><span class="tag">${esc(teamName())}</span>${G.tier===GP?`<span class="tag">${G.role==='race'?'레이스 드라이버':'리저브'}</span><span class="tag">머신 ${carRank(G.team)}위</span>`:''}<span class="tag">잠재력 ${grade(G.pot)}</span></div><div class="ovr xl">${Math.floor(ovrOf(s))}<small>OVR</small></div></div></div>
   <div class="card">${STATS.map(([k,l])=>{const dv=G.deltas[k]||0;return `<div class="stat"><span>${l}</span><div class="bar"><i style="width:${s[k]}%"></i></div><b class="num">${Math.floor(s[k])}</b><span class="d">${dv>=.05?'+'+dv.toFixed(1):''}</span></div>`}).join('')}</div>
   <div class="card"><div class="tiles"><div><b class="purple">${G.tot.titles}</b><span>챔피언</span></div><div><b>${G.tot.wins}</b><span>우승</span></div><div><b>${G.tot.podiums}</b><span>포디움</span></div><div><b>${G.tot.poles}</b><span>폴</span></div></div></div>
@@ -581,8 +622,9 @@ function render(){
   if(RC){liveShell();return}
   app.innerHTML=(tab==='table'?tableTab():tab==='me'?meTab():raceTab())+tabbar();
 }
-function newDraft(){draft={name:'한서준',nat:'대한민국',style:'pace',pot:rollPot(),rolls:3}}
-function syncDraft(){const n=document.getElementById('in-name'),s=document.getElementById('in-nat');if(n)draft.name=n.value;if(s)draft.nat=s.value}
+function newDraft(){draft={step:0,helmet:0,name:'',num:ri(2,99),nat:'대한민국',cands:mkCands(),sel:0,rolls:3,focus:[]}}
+function syncDraft(){const n=document.getElementById('in-name'),s=document.getElementById('in-nat'),u=document.getElementById('in-num');if(n)draft.name=n.value;if(s)draft.nat=s.value;if(u)draft.num=clamp(parseInt(u.value)||draft.num,2,99)}
+app.addEventListener('input',ev=>{if(G)return;syncDraft();const b=document.getElementById('next-btn');if(b)b.disabled=!draft.name.trim()});
 app.addEventListener('click',ev=>{
   const b=ev.target.closest('[data-a]'); if(!b)return; const a=b.dataset.a,v=b.dataset.v;
   if(a[0]==='l'&&RC&&a!=='lev0'){liveAct(a,v);return}
@@ -591,8 +633,15 @@ app.addEventListener('click',ev=>{
   else if(a==='seg'){seg=v}
   else if(a==='style'){draft.style=v}
   else if(a==='reroll'){if(draft.rolls>0){draft.rolls--;draft.pot=rollPot()}}
-  else if(a==='start'){startCareer();return}
-  else if(a==='focus'){G.focus=v||null}
+  else if(a==='cnext'){if(draft.step===2&&!draft.name.trim())return;draft.step++;window.scrollTo(0,0)}
+  else if(a==='cback'){draft.step--}
+  else if(a==='helm'){draft.helmet=+v}
+  else if(a==='rand'){draft.name=pick(KNAMES);draft.num=ri(2,99);draft.nat=pick(NATIONS)}
+  else if(a==='cand'){draft.sel=+v}
+  else if(a==='recand'){if(draft.rolls>0){draft.rolls--;draft.cands=mkCands();draft.sel=0;draft.focus=[]}}
+  else if(a==='fstat'){const f=draft.focus,i=f.indexOf(v);if(i>=0)f.splice(i,1);else{if(f.length>=2)f.shift();f.push(v)}}
+  else if(a==='start'){if(!draft.focus.length)return;startCareer();return}
+  else if(a==='focus'){const f=G.focus,i=f.indexOf(v);if(i>=0)f.splice(i,1);else{if(f.length>=2)f.shift();f.push(v)}}
   else if(a==='go'){G.phase='season';G.regNews=false;save()}
   else if(a==='next'){nextRound(false);window.scrollTo(0,0);return}
   else if(a==='quick'){nextRound(true);return}
@@ -608,7 +657,7 @@ app.addEventListener('click',ev=>{
   render();
 });
 function start(data){
-  G=(data&&data.G)||store.get(SAVE); if(G&&G.v!==2)G=null; if(G&&G.phase==='event'){G.phase='season';G.event=null}
+  G=(data&&data.G)||store.get(SAVE); if(G&&G.v!==2)G=null; if(G&&!Array.isArray(G.focus))G.focus=G.focus?[G.focus]:[]; if(G&&G.phase==='event'){G.phase='season';G.event=null}
   newDraft(); render();
 }
 window.claude?.hot?.snapshot?.(()=>({G}));
