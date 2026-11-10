@@ -13,15 +13,15 @@
 /* Layout: one narrow column, one job per screen. Three tabs (레이스 / 순위 / 드라이버) on a bottom bar; grouped lists and large titles. */
 :root{
   --bg:#f2f2f7; --surface:#ffffff; --raise:#e9e9ee; --ink:#1c1c1e; --muted:#6e6e73; --line:#dcdce1;
-  --blue:#0071e3; --on-blue:#ffffff; --green:#1f8a3b; --red:#d70015; --purple:#8944ab; --bar:rgba(249,249,251,.84);
+  --blue:#0071e3; --on-blue:#ffffff; --green:#1f8a3b; --red:#d70015; --purple:#8944ab; --orange:#b85c00; --bar:rgba(249,249,251,.84);
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Pretendard","Noto Sans KR","Malgun Gothic","Segoe UI",system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --bg:#000000; --surface:#1c1c1e; --raise:#2c2c2e; --ink:#f5f5f7; --muted:#98989f; --line:#38383a;
-  --blue:#0a84ff; --on-blue:#ffffff; --green:#30d158; --red:#ff453a; --purple:#bf5af2; --bar:rgba(22,22,24,.84); color-scheme:dark } }
+  --blue:#0a84ff; --on-blue:#ffffff; --green:#30d158; --red:#ff453a; --purple:#bf5af2; --orange:#ff9f0a; --bar:rgba(22,22,24,.84); color-scheme:dark } }
 :root[data-theme="dark"]{
   --bg:#000000; --surface:#1c1c1e; --raise:#2c2c2e; --ink:#f5f5f7; --muted:#98989f; --line:#38383a;
-  --blue:#0a84ff; --on-blue:#ffffff; --green:#30d158; --red:#ff453a; --purple:#bf5af2; --bar:rgba(22,22,24,.84); color-scheme:dark }
+  --blue:#0a84ff; --on-blue:#ffffff; --green:#30d158; --red:#ff453a; --purple:#bf5af2; --orange:#ff9f0a; --bar:rgba(22,22,24,.84); color-scheme:dark }
 
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;
@@ -110,6 +110,8 @@ button.rw{cursor:pointer} button.rw:disabled{cursor:default} button.rw:active{ba
 .kv span{color:var(--muted)} .kv i{font-style:normal;font-weight:700;margin-left:4px}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--red);flex:none}
 .tag.green{color:var(--green)} .tag.red{color:var(--red)}
+.bdg{font-style:normal;font-size:11px;font-weight:700;border-radius:5px;padding:1px 6px;margin-right:5px;color:var(--surface);background:var(--muted);white-space:nowrap}
+.bdg.bG{background:var(--green)} .bdg.bB{background:var(--blue)} .bdg.bO{background:var(--orange)} .bdg.bP{background:var(--purple)}
 /* tab bar */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--line);
   padding:6px max(16px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px))}
@@ -160,7 +162,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rname=()=>pick(FIRST)+' '+pick(LAST);
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
-let G=null, draft=null, confirmRetire=false, confirmNew=false, tab='race', seg='champ', turnOpen=false, offerOpen=null, offerYears=2, shopSel=null, shopMsg='';
+let G=null, draft=null, confirmRetire=false, confirmNew=false, tab='race', seg='champ', turnOpen=false, offerOpen=null, offerYears=2, shopSel=null, shopMsg='', approachOpen=false;
 
 const ovrOf=s=>s.pace*.25+s.race*.25+s.ovt*.15+s.tyre*.15+s.wet*.1+s.mental*.1;
 const grade=p=>p>=94?'S':p>=88?'A':p>=82?'B':p>=76?'C':'D';
@@ -616,7 +618,7 @@ function endSeason(){
   G.history.push({year:G.year,age:G.age,series:TIERS[G.tier].short,team:teamName(),role:G.role,pos,pts:idx<0?0:st[idx].pts,wins:G.ss.wins,pod:G.ss.podiums,champ});
   G.seasonEnd={pos,champ,pts:idx<0?0:st[idx].pts,mate,winner:st[0]&&st[0].name};
   G.money+=G.contract.salary;G.seasonEnd.paid=G.contract.salary;G.seasonEnd.prize=+(G.seasonEnd.pts*[.001,.002,.004,.008,.05][G.tier]).toFixed(3);G.money+=G.seasonEnd.prize;G.contract.years=Math.max(0,G.contract.years-1);
-  G.offers=makeOffers(pos,mate);G.rep=0;newTurn();G.phase='offseason';confirmRetire=false;
+  G.offers=makeOffers(pos,mate);G.rep=0;G.approach={left:2,tried:[],msg:''};newTurn();G.phase='offseason';confirmRetire=false;
 }
 function makeOffers(pos,mate){
   const o=[], ovr=ovrOf(G.stats), age=G.age+1;
@@ -652,12 +654,30 @@ function makeOffers(pos,mate){
   const c=G.contract, wasGP=G.tier===GP, drop=!!G.seasonEnd.dropped;
   if(wasGP&&c.years>0&&drop){const pay=+(c.salary*c.years*.5).toFixed(1);G.money+=pay;G.seasonEnd.payout=pay;c.years=0}
   const locked=wasGP&&c.years>0;
-  o.forEach(x=>{const mine=x.type==='gp'&&wasGP&&x.team===G.team;
-    x.salary=salaryFor(x); x.maxY=x.type==='jr'?1:x.role==='reserve'?1:age>=34?1:3; x.years=Math.min(2,x.maxY);
-    if(locked){ if(mine&&x.role===G.role){x.locked=1;x.years=c.years;x.salary=c.salary} else if(!mine){x.fee=+(c.salary*c.years*.3).toFixed(1)} }});
+  o.forEach(x=>termOffer(x,age));
   return o;
 }
 const YMOD=[1.1,1,.92];
+function termOffer(x,age,self){const c=G.contract, wasGP=G.tier===GP, locked=wasGP&&c.years>0, mine=x.type==='gp'&&wasGP&&x.team===G.team;
+  x.salary=salaryFor(x); if(self)x.salary=+(x.salary*.9).toFixed(2);
+  x.maxY=x.type==='jr'?1:x.role==='reserve'?1:age>=34?1:3; x.years=Math.min(2,x.maxY);
+  if(locked){ if(mine&&x.role===G.role){x.locked=1;x.years=c.years;x.salary=c.salary} else if(!mine){x.fee=+(c.salary*c.years*.3).toFixed(1)} }
+  return x}
+function approachList(){const ovr=ovrOf(G.stats), age=G.age+1, L=[]; if(G.tier<GP&&age>26)return L;
+  if(G.tier<3){const nt=G.tier+1;[3,0,-3].forEach(b=>{ if(G.offers.some(o=>o.type==='jr'&&o.tier===nt&&o.bonus>=b))return;
+    L.push({key:'j'+b,type:'jr',tier:nt,bonus:b,label:`${TIERS[nt].short} ${b>0?'명문 팀':b<0?'약체 팀':'중위권 팀'}`,ch:clamp(.45+(ovr-(TIERS[nt].base+b*2.5))*.05,.03,.95)})})}
+  if(G.tier>=2)G.teams.forEach((t,i)=>{const td=teamDrivers(i); if(!td.length)return; if(G.tier===GP&&G.team===i&&G.role==='race')return;
+    if(G.offers.some(o=>o.type==='gp'&&o.team===i&&o.role==='race'))return;
+    const weak=td[td.length-1], sc=ovr+(age<=23?3:0);
+    L.push({key:'t'+i,type:'gp',team:i,label:t.name,color:t.color,ch:clamp(.4+(sc-weak.ovr)*.09,.02,.95),rsv:sc>=weak.ovr-12&&age<=27})});
+  return L.filter(x=>!G.approach.tried.includes(x.key))}
+function approach(key){const a=approachList().find(x=>x.key===key); if(!a||G.approach.left<=0)return; G.approach.left--; G.approach.tried.push(key); const age=G.age+1;
+  if(R()<a.ch){const o=a.type==='jr'?{type:'jr',tier:a.tier,name:pick(JR_TEAMS),bonus:a.bonus,self:1}:{type:'gp',team:a.team,role:'race',self:1};
+    G.offers.unshift(termOffer(o,age,true)); G.approach.msg=`${a.type==='jr'?o.name:a.label}이(가) 제안을 받아들였습니다. 아래 목록에 추가됐습니다.`}
+  else if(a.type==='gp'&&a.rsv&&!G.offers.some(o=>o.type==='gp'&&o.team===a.team)&&!(G.tier===GP&&G.team===a.team)){
+    G.offers.unshift(termOffer({type:'gp',team:a.team,role:'reserve',self:1},age,true)); G.approach.msg=`${a.label}: 레이스 시트는 어렵지만 리저브 자리는 줄 수 있다고 합니다. 아래 목록에 추가됐습니다.`}
+  else G.approach.msg=`${a.label}이(가) 정중히 거절했습니다.`;
+  save()}
 function salaryFor(o){
   if(o.type==='jr')return +([0,.2,.5,1.2][o.tier]*(1+o.bonus*.08)).toFixed(2);
   const rank=G.teams.slice().sort((a,b)=>b.car-a.car).indexOf(G.teams[o.team])+1, ovr=ovrOf(G.stats);
@@ -669,7 +689,7 @@ function acceptOffer(i){
   const of=G.offers[i];
   if(of.fee){if(G.money<of.fee)return;G.money-=of.fee}
   if(!of.locked){const y=clamp(offerYears||of.years,1,of.maxY);G.contract={years:y,salary:of.type==='gp'?+(of.salary*YMOD[y-1]).toFixed(1):of.salary}}
-  offerOpen=null;
+  offerOpen=null;approachOpen=false;
   // vacate current GP race seat
   if(G.tier===GP&&G.role==='race'&&!(of.type==='gp'&&of.stay)){G.drivers.push(mkDriver(73+R()*8,ri(20,27),G.team))}
   evolveWorld();
@@ -746,6 +766,7 @@ function viewCreate(){const d=draft;
 function phaseBlocks(){
   const T=TIERS[G.tier];
   if(turnOpen&&G.turn&&turnDef())return turnView();
+  if(G.phase==='offseason'&&approachOpen)return approachView();
   if(G.phase==='offseason'&&offerOpen!=null&&G.offers&&G.offers[offerOpen])return offerView(offerOpen);
   if(G.phase==='preseason'){
     return `<div class="card"><div><div class="cap">프리시즌</div><div class="ttl">집중해서 키울 능력치</div></div>
@@ -764,9 +785,9 @@ function phaseBlocks(){
   if(G.phase==='offseason'){const e=G.seasonEnd;
     const hd=e.champ?(G.tier===GP?'월드 챔피언':T.short+' 챔피언'):e.pos?`시즌 ${e.pos}위`:'출전 없이 시즌 종료';
     const offers=G.offers.map((o,i)=>{const term=o.locked?`계약 ${o.years}년 남음 · 연 ${won(o.salary)}`:`${o.maxY>1?'최대 '+o.maxY+'년':'1년'} · 연 ${won(o.salary)}${o.fee?' · 위약금 '+won(o.fee):''}`;
-      if(o.type==='jr'){const t=TIERS[o.tier];return `<button class="rw" data-a="offer" data-v="${i}">${sw()}<div class="g"><b>${esc(o.name)}</b><span>${t.short} ${o.stay?'잔류':o.back?'복귀':o.skip?'월반':'승격'} · ${o.bonus>0?'명문 팀':o.bonus<0?'약체 팀':'중위권 팀'}</span><span>${term}</span></div><span class="ch">›</span></button>`}
+      if(o.type==='jr'){const t=TIERS[o.tier];return `<button class="rw" data-a="offer" data-v="${i}">${sw()}<div class="g"><b>${esc(o.name)}</b><span>${bdg(o)}${t.short} · ${o.bonus>0?'명문 팀':o.bonus<0?'약체 팀':'중위권 팀'}</span><span>${term}</span></div><span class="ch">›</span></button>`}
       const t=G.teams[o.team];
-      return `<button class="rw" data-a="offer" data-v="${i}">${sw(t.color)}<div class="g"><b>${esc(t.name)}</b><span>${o.locked?'잔류':o.stay?'재계약':o.fee?'이적':'제안'} · ${o.role==='race'?'레이스 시트':'리저브'} · 머신 ${carRank(o.team)}위</span><span>${term}</span></div><span class="ch">›</span></button>`}).join('');
+      return `<button class="rw" data-a="offer" data-v="${i}">${sw(t.color)}<div class="g"><b>${esc(t.name)}</b><span>${bdg(o)}${o.role==='race'?'레이스 시트':'리저브'} · 머신 ${carRank(o.team)}위</span><span>${term}</span></div><span class="ch">›</span></button>`}).join('');
     return `<div class="card flash"><div><div class="cap">${G.year} 시즌 종료</div><div class="ttl${e.champ?' purple':''}">${hd}</div></div>
     <div class="kvs"><div class="kv"><span>출전</span><b class="num">${G.ss.races}경기 · ${e.pts} PTS</b></div><div class="kv"><span>우승 · 포디움</span><b class="num">${G.ss.wins}승 · ${G.ss.podiums}회</b></div>
     ${e.champ?'':`<div class="kv"><span>챔피언</span><b>${esc(e.winner||'-')}</b></div>`}
@@ -777,7 +798,9 @@ function phaseBlocks(){
     ${G.contract.years>0&&G.tier===GP?`<div class="note">${esc(teamName())}와(과)의 계약이 ${G.contract.years}년 남았습니다. 남거나, 위약금을 내고 옮길 수 있습니다.</div>`:''}
     ${G.offers.length?'':`<div class="note">${G.tier<GP?'후원사가 떠났습니다. 주니어 포뮬러에 남을 자금이 없습니다.':'어느 팀도 시트를 제안하지 않았습니다.'}</div>`}</div>
     ${todo()}
+    ${G.approach.msg?`<div class="note">${esc(G.approach.msg)}</div>`:''}
     ${G.offers.length?`<div class="gl">${G.year+1} 시즌 제안</div><div class="list">${offers}</div>`:''}
+    ${G.approach.left>0&&approachList().length?`<button class="tbtn" data-a="apopen">먼저 제안 넣기 (${G.approach.left}회 남음)</button>`:''}
     ${confirmRetire?`<div class="card"><p>정말 은퇴할까요? 되돌릴 수 없습니다.</p><button class="btn" data-a="retireno">계속 달린다</button><button class="tbtn red" data-a="retireyes">은퇴한다</button></div>`:`<button class="tbtn red" data-a="retire">은퇴하기</button>`}`}
   if(G.phase==='retired'){const [t,d]=legacy();
     return `<div class="card"><div><div class="cap">${G.history.length}시즌 · ${G.age}세 은퇴</div><div class="ttl">${t}</div></div><p class="sub">${d}</p>
@@ -786,6 +809,15 @@ function phaseBlocks(){
   return '';
 }
 const up=d=>{const r=Math.round(d);return r>0?`<i class="green">+${r}</i>`:r<0?`<i class="red">${r}</i>`:''};
+function bdg(o){const B=(c,t)=>`<i class="bdg ${c}">${t}</i>`; let h;
+  if(o.locked)h=B('bG','잔류');
+  else if(o.type==='jr')h=o.stay?(o.name===G.jr.name?B('bB','재계약'):B('','시리즈 잔류')):o.back?B('bO','복귀'):o.skip?B('bP','월반'):B('bP','승격');
+  else h=o.stay?B('bB','재계약'):o.fee?B('bO','이적'):B('','제안');
+  return h+(o.self?B('bP','내 제안'):'')}
+function approachView(){const L=approachList(), lv=c=>c>=.65?'높음':c>=.35?'보통':c>=.12?'낮음':'희박';
+  return `<div class="card"><div><div class="cap">남은 기회 ${G.approach.left}회</div><div class="ttl">먼저 제안 넣기</div></div><p class="sub">원하는 팀에 먼저 연락합니다. 받아들여지면 제안 목록에 추가되고, 먼저 요청한 계약은 연봉이 10% 낮습니다. 거절한 팀에는 이번 겨울에 다시 연락할 수 없습니다.</p></div>
+  ${L.length?`<div class="list">${L.map(a=>`<button class="rw" data-a="apgo" data-v="${a.key}">${sw(a.color)}<div class="g"><b>${esc(a.label)}</b><span>${a.type==='gp'?`레이스 시트 요청 · 머신 ${carRank(a.team)}위 · `:''}성사 가능성 ${lv(a.ch)}</span></div><span class="ch">›</span></button>`).join('')}</div>`:'<div class="card"><p class="sub">지금 연락할 수 있는 팀이 없습니다.</p></div>'}
+  <button class="tbtn" data-a="apback">돌아가기</button>`}
 function offerView(i){const o=G.offers[i], jr=o.type==='jr', t=jr?null:G.teams[o.team], y=o.locked?o.years:clamp(offerYears,1,o.maxY), sal=o.locked||jr?o.salary:+(o.salary*YMOD[y-1]).toFixed(1);
   const mates=jr?[]:teamDrivers(o.team).slice(0,o.role==='race'&&!(G.tier===GP&&G.team===o.team&&G.role==='race')?1:2), short=o.fee&&G.money<o.fee;
   return `<div class="card flash"><div><div class="cap">${o.locked?'계약 이행':o.fee?'계약 기간 중 이적 제안':o.stay&&!jr?'재계약 제안':'계약 제안'}</div><div class="ttl">${esc(jr?o.name:t.name)}</div></div>
@@ -799,7 +831,7 @@ function offerView(i){const o=G.offers[i], jr=o.type==='jr', t=jr?null:G.teams[o
   ${o.locked?'<p class="sub" style="font-size:13px">기존 계약 조건 그대로 한 시즌을 더 달립니다.</p>':''}
   ${short?'<div class="note">보유 자금이 위약금보다 적어 이적할 수 없습니다.</div>':''}
   <button class="btn" data-a="osign"${short?' disabled':''}>${o.locked?'팀에 남는다':o.fee?'위약금을 내고 이적한다':'계약한다'}</button><button class="tbtn" data-a="oback">돌아가기</button></div>`}
-function lastCard(){const L=G.last; if(!L||turnOpen||offerOpen!=null||(G.phase!=='season'&&G.phase!=='offseason'))return '';
+function lastCard(){const L=G.last; if(!L||turnOpen||approachOpen||offerOpen!=null||(G.phase!=='season'&&G.phase!=='offseason'))return '';
   const c=L.dnf?'red':L.pos===1?'purple':L.pos<=3?'green':'';
   return `<div class="card flash"><div class="cap">${L.gp} 그랑프리 결과${L.wet?' · 우천':''}</div>
   <div class="resrow"><div class="pos ${L.raced?c:'mut'}">${L.raced?(L.dnf?'DNF':'P'+L.pos):'대기'}</div><div><p>${esc(L.text)}</p>${L.raced?`<p class="sub num">그리드 P${L.grid}${L.dnf?'':` · +${L.pts} PTS`}</p>`:''}</div></div>
@@ -839,8 +871,11 @@ app.addEventListener('click',ev=>{
   const b=ev.target.closest('[data-a]'); if(!b)return; const a=b.dataset.a,v=b.dataset.v;
   if(a[0]==='l'&&RC&&a!=='lev0'){liveAct(a,v);return}
   if(!G)syncDraft();
-  if(a==='tab'){shopSel=null;shopMsg='';tab=v;turnOpen=false;offerOpen=null;confirmNew=false;window.scrollTo(0,0)}
+  if(a==='tab'){approachOpen=false;shopSel=null;shopMsg='';tab=v;turnOpen=false;offerOpen=null;confirmNew=false;window.scrollTo(0,0)}
   else if(a==='seg'){seg=v}
+  else if(a==='apopen'){approachOpen=true;window.scrollTo(0,0)}
+  else if(a==='apback'){approachOpen=false}
+  else if(a==='apgo'){approach(v);approachOpen=false}
   else if(a==='buy'){shopSel=v;shopMsg='';window.scrollTo(0,0)}
   else if(a==='buyno'){shopSel=null}
   else if(a==='buyok'){buy(shopSel)}
@@ -876,7 +911,7 @@ app.addEventListener('click',ev=>{
   render();
 });
 function start(data){
-  G=(data&&data.G)||store.get(SAVE); if(G&&G.v!==2)G=null; if(G){G.pot=POT;G.owned=G.owned||[];G.perm=G.perm||{grow:0,mental:0};G.contract=G.contract||{years:0,salary:0};G.money=G.money||0;if(G.offers)G.offers.forEach(x=>{if(x.salary==null){x.salary=0;x.maxY=1;x.years=1}});G.seen=G.seen||[];G.buff=G.buff||{grow:1,car:0};G.act=G.act||{grow:1,car:0};G.s0=G.s0||{ovr:ovrOf(G.stats),stats:{...G.stats}}}
+  G=(data&&data.G)||store.get(SAVE); if(G&&G.v!==2)G=null; if(G){G.pot=POT;G.approach=G.approach||{left:2,tried:[],msg:''};G.owned=G.owned||[];G.perm=G.perm||{grow:0,mental:0};G.contract=G.contract||{years:0,salary:0};G.money=G.money||0;if(G.offers)G.offers.forEach(x=>{if(x.salary==null){x.salary=0;x.maxY=1;x.years=1}});G.seen=G.seen||[];G.buff=G.buff||{grow:1,car:0};G.act=G.act||{grow:1,car:0};G.s0=G.s0||{ovr:ovrOf(G.stats),stats:{...G.stats}}}
   if(G&&!Array.isArray(G.focus))G.focus=G.focus?[G.focus]:[]; if(G&&G.phase==='event'){G.phase='season';G.event=null}
   newDraft(); render();
 }
