@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="카트에서 시작해 GP1 월드 챔피언을 노리는 드라이버 커리어 시뮬레이션 게임">
+<meta name="description" content="카트에서 시작해 F1 월드 챔피언을 노리는 드라이버 커리어 시뮬레이션 게임 (비공식 팬메이드)">
 <meta property="og:title" content="포디움 로드">
 <meta property="og:description" content="카트에서 월드 챔피언까지. 무료 웹 드라이버 커리어 게임">
 <style>body{margin:0}[hidden]{display:none!important}</style>
@@ -99,6 +99,7 @@ tr.gap td{padding:0;height:6px;border-bottom:1px dashed var(--line)}
 .res .p{font-family:var(--display);font-weight:800;font-size:64px;line-height:.85}
 .res .p.purple{color:var(--purple)} .res .p.green{color:var(--green)} .res .p.red{color:var(--red)}
 .prog{display:flex;gap:3px} .prog i{flex:1;height:5px;background:var(--raise);border-radius:1px} .prog i.done{background:var(--ink)}
+.foot{font-size:12px;color:var(--muted);max-width:70ch}
 .note{border-left:3px solid var(--yellow);padding:6px 10px;background:var(--raise);font-size:13px;border-radius:0 3px 3px 0}
 @media (prefers-reduced-motion:no-preference){.flash{animation:fl .35s ease-out}}
 @keyframes fl{from{transform:translateY(4px);opacity:.4}to{transform:none;opacity:1}}
@@ -116,11 +117,17 @@ const TIERS=[
  {name:'포뮬러 4',short:'F4',rounds:7,base:47,cw:.3},
  {name:'포뮬러 3',short:'F3',rounds:8,base:57,cw:.35},
  {name:'포뮬러 2',short:'F2',rounds:10,base:66,cw:.35},
- {name:'GP1 월드 챔피언십',short:'GP1',rounds:16,cw:.55}];
+ {name:'F1 월드 챔피언십',short:'F1',rounds:16,cw:.55}];
 const GP=4;
-const TEAMS=[['베르밀리오 코르세','#d43a3a'],['노르트슈테른 GP','#3aa7a0'],['킹스턴 그랑프리','#e08a1e'],['아주르 레이싱','#2f6fe0'],['타이탄 모터스포츠','#3d8a4a'],
- ['솔라리스 레이싱','#d6b21f'],['블랙우드 GP','#6b7280'],['한울 레이싱','#c2459a'],['폴라리스 오토','#5bb4e6'],['미라지 GP','#8d6ad9']];
-const JR_TEAMS=['델타 모터스포츠','카리나 레이싱','보레알 주니어','헥사 레이싱','오리온 아카데미','팔콘 레이싱','노바 모터스','그리폰 레이싱','라이트하우스 팀','제니스 레이싱'];
+const TEAMS=[['메르세데스','#27c8b4',94],['페라리','#e0282d',91],['맥라렌','#f58020',90],['레드불 레이싱','#3b63c9',87],['하스','#9aa0a8',80],
+ ['알핀','#e868b3',79],['레이싱 불스','#6c8cff',79],['아우디','#b8443a',77],['윌리엄스','#2a9be8',77],['애스턴 마틴','#1f8a6d',72],['캐딜락','#8a8f99',70]];
+// 2026 시즌 그리드: [이름, 팀, OVR, 나이, 잠재력]
+const DRIVERS=[['조지 러셀',0,91,28],['키미 안토넬리',0,85,19,95],['샤를 르클레르',1,91,28],['루이스 해밀턴',1,87,41],['랜도 노리스',2,91,26],['오스카 피아스트리',2,90,25,93],
+ ['막스 베르스타펜',3,95,28],['아이작 아자르',3,84,21,91],['에스테반 오콘',4,82,29],['올리버 베어먼',4,82,21,90],['피에르 가슬리',5,85,30],['프랑코 콜라핀토',5,78,23,85],
+ ['리암 로슨',6,80,24,85],['아비드 린드블라드',6,77,18,91],['니코 휠켄베르크',7,83,38],['가브리엘 보르톨레토',7,81,21,90],['알렉스 알본',8,85,30],['카를로스 사인츠',8,87,31],
+ ['페르난도 알론소',9,87,44],['랜스 스트롤',9,78,27],['세르히오 페레스',10,81,36],['발테리 보타스',10,80,36]];
+const PROSPECTS='레오나르도 포르나롤리|알렉스 던|리처드 베르쇼어|페페 마르티|루크 브라우닝|잭 두한|조슈아 뒤르크센|디노 베가노비치|라파엘 카마라|니콜라 촐로프|프레디 슬레이터|올리버 괴테|폴 아론|잭 크로포드|빅토르 마르틴스|세바스티안 몬토야|쿠시 마이니|츠노다 유키|저우관위|믹 슈마허|펠리페 드루고비치|테오 푸르셰르|이와사 아유무|미야타 리토모|로만 스타넥|마리 보야|노엘 레온|우고 우고추쿠|투카 타포넨|라우렌스 판 후펜|마르티니우스 스텐스호르네|팀 트람니츠|알레산드로 지우스티|가브리엘레 미니|막스 에스터슨|크리스티안 호|테오필 나엘|제임스 워튼|브랜도 바도어|도리안 핀|신우현|키안 나카무라-베르타|엔조 델리니|찰리 워츠|산티아고 라모스|칼럼 부아쟁|닉 더프리스|로버트 슈워츠먼|콜턴 허타|파토 오와드'.split('|');
+const JR_TEAMS=['프레마 레이싱','ART 그랑프리','하이텍','캄포스 레이싱','로딘 모터스포트','MP 모터스포트','인빅타 레이싱','DAMS','트라이던트','반 아메르스포르트'];
 const CIRCUITS=['사키르','제다','멜버른','스즈카','상하이','마이애미','이몰라','모나코','바르셀로나','몬트리올','실버스톤','스파','몬차','싱가포르','상파울루','아부다비'];
 const FIRST='루카 마테오 올리버 펠릭스 휴고 다니엘 안톤 켄지 리암 노아 에밀 라파엘 니코 테오 유리 하루토 지안 마르코 알렉스 빅토르 토마스 이안 준호 카이 디에고 엔조 요나스 패트릭 사미르 민재'.split(' ');
 const LAST='베르나르디 하트만 린드크비스트 모로 오카다 산토스 뮐러 페트로프 캠벨 드보어 로시니 타카하시 앤더슨 가르시아 쿠퍼 뒤랑 노박 실바 반더베르크 맥캘런 요한손 페레이라 윤 강 첸 싱 코왈스키 브레너 마르티넬리 피셔'.split(' ');
@@ -144,11 +151,12 @@ const grade=p=>p>=94?'S':p>=88?'A':p>=82?'B':p>=76?'C':'D';
 const rollPot=()=>Math.round(72+Math.pow(R(),1.25)*26);
 
 /* ---------- world ---------- */
-function mkDriver(ovr,age,team,pot){return{id:G.nid++,name:rname(),ovr,age,team,pot:pot||clamp(ovr+R()*7,ovr,97)}}
+function freeProspects(){const on=new Set(G.drivers.map(d=>d.name));return PROSPECTS.filter(n=>!on.has(n)&&!G.used.includes(n))}
+function prospect(){const f=freeProspects();const n=f.length?pick(f):rname();G.used.push(n);return n}
+function mkDriver(ovr,age,team,pot){return{id:G.nid++,name:prospect(),ovr,age,team,pot:pot||clamp(ovr+R()*7,ovr,97)}}
 function newWorld(){
-  G.teams=TEAMS.map((t,i)=>({name:t[0],color:t[1],car:clamp(94-i*3+g()*1.5,60,96)}));
-  G.drivers=[];
-  TEAMS.forEach((t,i)=>{for(let j=0;j<2;j++)G.drivers.push(mkDriver(clamp(92-i*1.6-j*2.5+g()*2.2,72,95),ri(21,35),i))});
+  G.teams=TEAMS.map(t=>({name:t[0],color:t[1],car:t[2]}));G.used=[];
+  G.drivers=DRIVERS.map(d=>({id:G.nid++,name:d[0],team:d[1],ovr:d[2],age:d[3],pot:d[4]||d[2]}));
 }
 const teamDrivers=t=>G.drivers.filter(d=>d.team===t).sort((a,b)=>b.ovr-a.ovr);
 function evolveWorld(){
@@ -158,12 +166,12 @@ function evolveWorld(){
   G.drivers.forEach((d,i)=>{
     d.age++;
     if(d.age<=26)d.ovr+=Math.min(d.pot-d.ovr,R()*2.5); else if(d.age>=33)d.ovr-=.5+R()*1.5;
-    if(d.age>=38||(d.ovr<73&&R()<.5)){const n=mkDriver(72+R()*8,ri(19,23),d.team,78+R()*18);G.drivers[i]=n}
+    if(d.age>=41?R()<.6:d.age>=37?R()<.25:(d.ovr<73&&R()<.5)){const n=mkDriver(72+R()*8,ri(19,23),d.team,78+R()*18);G.drivers[i]=n}
   });
   // top teams poach the best driver from further down the grid
   const order=G.teams.map((t,i)=>i).sort((a,b)=>G.teams[b].car-G.teams[a].car);
   order.slice(0,4).forEach(ti=>{
-    if(R()>.35)return; const mine=teamDrivers(ti); if(!mine.length)return; const weak=mine[mine.length-1];
+    if(R()>.35)return; const mine=teamDrivers(ti); if(mine.length<2)return; const weak=mine[mine.length-1];
     const lower=G.drivers.filter(d=>G.teams[d.team].car<G.teams[ti].car-3).sort((a,b)=>b.ovr-a.ovr)[0];
     if(lower&&lower.ovr>weak.ovr+3){const t=lower.team;lower.team=ti;weak.team=t}
   });
@@ -172,7 +180,7 @@ function evolveWorld(){
 /* ---------- career ---------- */
 function startCareer(){
   const s={};STATS.forEach(([k])=>s[k]=ri(29,40)); s[draft.style]+=7;
-  G={v:1,nid:1,name:draft.name.trim()||'이름 없는 드라이버',nat:draft.nat,style:draft.style,age:15,year:2027,pot:draft.pot,stats:s,
+  G={v:2,nid:1,name:draft.name.trim()||'이름 없는 드라이버',nat:draft.nat,style:draft.style,age:15,year:2026,pot:draft.pot,stats:s,
      tier:0,role:'race',jr:{name:pick(JR_TEAMS),bonus:0},team:null,focus:null,phase:'preseason',
      tot:{titles:0,wins:0,podiums:0,poles:0,races:0,points:0,jr:0},history:[],last:null,deltas:{}};
   newWorld(); startSeason(); save(); render();
@@ -181,7 +189,8 @@ function startSeason(){
   G.round=0;G.table={};G.ss={wins:0,podiums:0,poles:0,races:0};G.last=null;G.event=null;G.promoNote=null;G.deltas={};
   if(G.tier<GP){
     const T=TIERS[G.tier];
-    G.field=Array.from({length:15},(_,i)=>({key:'a'+i,name:rname(),team:pick(JR_TEAMS),skill:T.base+g()*6+(i<2?6:0),car:70+g()*2}));
+    const fp=freeProspects().sort(()=>R()-.5);
+    G.field=Array.from({length:15},(_,i)=>({key:'a'+i,name:fp[i]||rname(),team:pick(JR_TEAMS),skill:T.base+g()*6+(i<2?6:0),car:70+g()*2}));
   }
   G.phase='preseason';
 }
@@ -334,8 +343,8 @@ function retire(){
 }
 function legacy(){const t=G.tot;
   return t.titles>=7?['역대 최고','이름 자체가 기록이 되었습니다.']:t.titles>=4?['전설','패독의 누구도 이 이름을 잊지 못합니다.']:t.titles>=1?['월드 챔피언','세계 정상에 선 드라이버입니다.']
-   :t.wins>=1?['그랑프리 위너','포디움 맨 위의 공기를 아는 드라이버입니다.']:t.podiums>0&&G.history.some(h=>h.series==='GP1')?['포디움 피니셔','샴페인 맛은 봤습니다.']
-   :G.history.some(h=>h.series==='GP1'&&h.role==='race')?['GP1 드라이버','스무 명뿐인 자리에 앉았던 사람입니다.']:G.history.some(h=>h.series==='GP1')?['영원한 리저브','헬멧은 늘 준비되어 있었습니다.']:['미완의 유망주','꿈의 무대는 끝내 닿지 않았습니다.']}
+   :t.wins>=1?['그랑프리 위너','포디움 맨 위의 공기를 아는 드라이버입니다.']:t.podiums>0&&G.history.some(h=>h.series==='F1')?['포디움 피니셔','샴페인 맛은 봤습니다.']
+   :G.history.some(h=>h.series==='F1'&&h.role==='race')?['F1 드라이버','스무 명뿐인 자리에 앉았던 사람입니다.']:G.history.some(h=>h.series==='F1')?['영원한 리저브','헬멧은 늘 준비되어 있었습니다.']:['미완의 유망주','꿈의 무대는 끝내 닿지 않았습니다.']}
 function save(){store.set(SAVE,G)}
 
 /* ---------- view ---------- */
@@ -345,7 +354,7 @@ function header(){return `<div class="top"><div class="brand"><span class="light
 function viewCreate(){
   const d=draft;
   return header()+`<div class="panel stack"><div><div class="eyebrow">DRIVER ENTRY</div><div class="big">열다섯 살, 카트 한 대.</div>
-  <p class="muted" style="max-width:62ch;margin-top:6px">카트 선수권에서 시작해 F4, F3, F2를 거쳐 GP1 시트를 따내세요. 강팀 리저브로 벤치를 지킬지, 하위 팀에서 달릴지는 당신이 고릅니다. 월드 챔피언 횟수가 곧 기록입니다.</p></div>
+  <p class="muted" style="max-width:62ch;margin-top:6px">카트 선수권에서 시작해 F4, F3, F2를 거쳐 F1 시트를 따내세요. 강팀 리저브로 벤치를 지킬지, 하위 팀에서 달릴지는 당신이 고릅니다. 월드 챔피언 횟수가 곧 기록입니다.</p></div>
   <div class="row"><label class="f" for="in-name">드라이버 이름<input type="text" id="in-name" maxlength="16" value="${esc(d.name)}"></label>
   <label class="f" for="in-nat">국적<select id="in-nat">${NATIONS.map(n=>`<option${n===d.nat?' selected':''}>${n}</option>`).join('')}</select></label></div>
   <div><div class="small" style="font-weight:600;margin-bottom:6px">드라이빙 스타일</div><div class="opts">${STYLES.map(s=>`<button class="opt${d.style===s[0]?' on':''}" data-a="style" data-v="${s[0]}"><b>${s[1]}</b><span>${s[2]}</span></button>`).join('')}</div></div>
@@ -387,7 +396,7 @@ function actionPanel(){
   const prog=`<div class="prog">${Array.from({length:T.rounds},(_,i)=>`<i class="${i<G.round?'done':''}"></i>`).join('')}</div>`;
   if(G.phase==='preseason'){
     return `<div class="panel stack"><div><div class="eyebrow">${G.year} 프리시즌 · ${T.name}</div><div class="mid">${esc(teamName())}에서 ${G.tier===GP&&G.role==='reserve'?'리저브 드라이버로 대기합니다.':'시즌을 시작합니다.'}</div>
-    ${G.regNews&&G.tier===GP?'<div class="note" style="margin-top:8px">GP1 기술 규정이 바뀌었습니다. 팀 간 머신 서열이 크게 흔들립니다.</div>':''}
+    ${G.regNews&&G.tier===GP?'<div class="note" style="margin-top:8px">F1 기술 규정이 바뀌었습니다. 팀 간 머신 서열이 크게 흔들립니다.</div>':''}
     ${G.tier===GP&&G.role==='reserve'?'<p class="small muted" style="margin-top:6px">리저브는 주전이 결장할 때만 출전합니다. 성장 속도는 주전의 3분의 1 수준입니다. 시즌 중반에 주전보다 기량이 앞서면 시트를 넘겨받을 수 있습니다.</p>':''}</div>
     <div><div class="small" style="font-weight:600;margin-bottom:6px">이번 시즌 훈련 중점</div><div class="opts" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">${STATS.map(([k,l])=>`<button class="opt${G.focus===k?' on':''}" data-a="focus" data-v="${k}"><b>${l}</b><span class="tag">현재 ${Math.floor(G.stats[k])}</span></button>`).join('')}<button class="opt${!G.focus?' on':''}" data-a="focus" data-v=""><b>균형 훈련</b><span class="tag">고르게 성장</span></button></div></div>
     <div class="row"><button class="btn" data-a="go">개막전으로</button></div></div>`}
@@ -404,7 +413,7 @@ function actionPanel(){
     const offers=G.offers.map((o,i)=>{
       if(o.type==='jr'){const t=TIERS[o.tier];return `<button class="opt" data-a="offer" data-v="${i}"><span class="tag">${o.stay?'잔류':o.back?'한 단계 내려가기':'승격'} · ${t.short}</span><b>${esc(o.name)}</b><span>${t.name} · ${o.bonus>0?'명문 팀, 좋은 머신':o.bonus<0?'약체 팀, 느린 머신':'중위권 팀'}</span></button>`}
       const t=G.teams[o.team], rank=G.teams.slice().sort((a,b)=>b.car-a.car).indexOf(t)+1, td=teamDrivers(o.team);
-      return `<button class="opt" data-a="offer" data-v="${i}"><span class="tag">${o.stay?'재계약':'GP1 제안'} · 머신 ${rank}위</span><b>${sw(t.color)}${esc(t.name)}</b><span>${o.role==='race'?'레이스 시트':'리저브 드라이버'} · 팀메이트 ${td.slice(0,o.role==='race'&&!o.stay?1:2).map(d=>esc(d.name)+' '+Math.round(d.ovr)).join(', ')}</span></button>`}).join('');
+      return `<button class="opt" data-a="offer" data-v="${i}"><span class="tag">${o.stay?'재계약':'F1 제안'} · 머신 ${rank}위</span><b>${sw(t.color)}${esc(t.name)}</b><span>${o.role==='race'?'레이스 시트':'리저브 드라이버'} · 팀메이트 ${td.slice(0,o.role==='race'&&!o.stay?1:2).map(d=>esc(d.name)+' '+Math.round(d.ovr)).join(', ')}</span></button>`}).join('');
     return `<div class="panel stack flash"><div><div class="eyebrow">${G.year} 시즌 종료 · ${T.name}</div><div class="big" style="${e.champ?'color:var(--purple)':''}">${head}</div><p class="muted">${sub} ${e.pts} PTS · ${G.ss.wins}승 · 포디움 ${G.ss.podiums}회${e.mate?` · 팀메이트 ${esc(e.mate.name)} ${e.mate.pts} PTS`:''}</p></div>
     ${e.dropped?'<div class="note">팀이 재계약을 포기했습니다. 팀메이트와의 격차가 너무 컸습니다.</div>':''}
     ${G.offers.length?`<div><div class="small" style="font-weight:600;margin-bottom:6px">${G.year+1} 시즌 제안 (${age}세)</div><div class="opts">${offers}</div></div>`:`<div class="note">${G.tier<GP?'후원사가 더는 기다려 주지 않습니다. 주니어 포뮬러에 남을 자금이 없습니다.':'어느 팀도 시트를 제안하지 않았습니다.'}</div>`}
@@ -415,10 +424,11 @@ function actionPanel(){
     <div class="row"><button class="btn" data-a="newyes">새 커리어 시작</button></div></div>`+hallPanel(G.hallAt)}
   return '';
 }
+const FOOT='<p class="foot">비공식 팬메이드 게임입니다. F1, 각 팀, 드라이버와 아무 관련이 없으며, 게임 속 능력치·성적·이적은 모두 가상이고 실제 평가나 예측이 아닙니다.</p>';
 function render(){
-  if(!G){app.innerHTML=viewCreate();return}
+  if(!G){app.innerHTML=viewCreate()+FOOT;return}
   const right=actionPanel()+(G.phase==='retired'?'':lastPanel()+standingsPanel());
-  app.innerHTML=header()+`<div class="grid"><div class="col">${driverCard()}${historyPanel()}</div><div class="col">${right}</div></div>`;
+  app.innerHTML=header()+`<div class="grid"><div class="col">${driverCard()}${historyPanel()}</div><div class="col">${right}</div></div>`+FOOT;
 }
 function newDraft(){draft={name:'한서준',nat:'대한민국',style:'pace',pot:rollPot(),rolls:3}}
 function syncDraft(){const n=document.getElementById('in-name'),s=document.getElementById('in-nat');if(n)draft.name=n.value;if(s)draft.nat=s.value}
@@ -443,7 +453,7 @@ app.addEventListener('click',ev=>{
   render();
 });
 function start(data){
-  G=(data&&data.G)||store.get(SAVE); if(G&&G.v!==1)G=null;
+  G=(data&&data.G)||store.get(SAVE); if(G&&G.v!==2)G=null;
   newDraft(); render();
 }
 window.claude?.hot?.snapshot?.(()=>({G}));
